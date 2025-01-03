@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { UserRound, Search, Plus, Banknote } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Employee } from "@db/schema";
 
 interface LayoutProps {
@@ -16,12 +16,33 @@ interface LayoutProps {
 export function Layout({ children, employees, isLoading }: LayoutProps) {
   const [location, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedTerm, setDebouncedTerm] = useState("");
 
-  const filteredEmployees = employees.filter((employee) =>
-    `${employee.firstName} ${employee.lastName}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTerm(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const filteredEmployees = useMemo(() => {
+    if (!debouncedTerm) return employees;
+    const searchLower = debouncedTerm.toLowerCase();
+    return employees.filter((employee) =>
+      `${employee.firstName} ${employee.lastName} ${employee.position} ${employee.department || ''}`
+        .toLowerCase()
+        .includes(searchLower)
+    );
+  }, [employees, debouncedTerm]);
+
+  // Highlight matching text
+  const highlightMatch = (text: string) => {
+    if (!debouncedTerm) return text;
+    const parts = text.split(new RegExp(`(${debouncedTerm})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === debouncedTerm.toLowerCase() ? 
+        <span key={i} className="bg-yellow-200 text-gray-900">{part}</span> : part
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -75,21 +96,29 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                   />
                 ))}
               </div>
+            ) : filteredEmployees.length === 0 ? (
+              <div className="text-center p-4 text-gray-500">
+                Sonuç bulunamadı
+              </div>
             ) : (
               <div className="space-y-1">
                 {filteredEmployees.map((employee) => (
                   <Link key={employee.id} href={`/employee/${employee.id}`}>
                     <Button
                       variant={location === `/employee/${employee.id}` ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2 text-gray-700 h-auto py-3 transition-all hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98]"
+                      className={cn(
+                        "w-full justify-start gap-2 text-gray-700 h-auto py-3 transition-all hover:bg-gray-100",
+                        "hover:scale-[1.02] active:scale-[0.98]",
+                        debouncedTerm && "relative overflow-visible"
+                      )}
                     >
                       <UserRound className="h-4 w-4 flex-shrink-0" />
                       <div className="flex-1 text-left">
                         <div className="font-medium">
-                          {employee.firstName} {employee.lastName}
+                          {highlightMatch(`${employee.firstName} ${employee.lastName}`)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {employee.position}
+                          {highlightMatch(employee.position || '')}
                         </div>
                       </div>
                       <div className="flex flex-col items-end text-xs">
@@ -112,7 +141,9 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 pt-16">
-        <div className="animate-fadeIn"> {children} </div>
+        <div className="animate-fadeIn">
+          {children}
+        </div>
       </main>
     </div>
   );
