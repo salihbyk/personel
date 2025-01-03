@@ -101,6 +101,24 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // İzin silme endpoint'i eklendi
+  app.delete("/api/leaves/:id", async (req, res) => {
+    try {
+      const result = await db.delete(leaves)
+        .where(eq(leaves.id, parseInt(req.params.id)))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).send("İzin bulunamadı");
+      }
+
+      res.json({ message: "İzin silindi", leave: result[0] });
+    } catch (error: any) {
+      console.error("İzin silme hatası:", error);
+      res.status(500).send("İzin silinemedi: " + error.message);
+    }
+  });
+
   // Inventory Items (Envanter)
   app.get("/api/inventory", async (req, res) => {
     try {
@@ -117,20 +135,19 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/inventory", async (req, res) => {
     try {
-      // Zorunlu alanları kontrol et
-      const { name, type, condition } = req.body;
+      const { name, type, condition, assignedTo } = req.body;
+
       if (!name || !type || !condition) {
         return res.status(400).send("Zorunlu alanlar eksik: isim, tür ve durum gereklidir");
       }
 
-      // Yeni envanter öğesini oluştur
       const newItem = {
         name,
         type,
         condition,
         notes: req.body.notes || null,
-        assignedTo: req.body.assignedTo || null,
-        assignedAt: req.body.assignedTo ? new Date() : null,
+        assignedTo: assignedTo || null,
+        assignedAt: assignedTo ? new Date() : null,
       };
 
       const item = await db.insert(inventoryItems).values(newItem).returning();

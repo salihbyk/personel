@@ -42,13 +42,38 @@ interface WeeklyCalendarProps {
   employee: Employee;
 }
 
+const cardStyle = `
+  bg-gradient-to-br from-blue-50 via-white to-blue-50
+  border-blue-100
+  shadow-sm
+  hover:shadow-lg
+  hover:-translate-y-0.5
+  transition-all duration-300
+  after:absolute
+  after:bottom-0
+  after:left-0
+  after:right-0
+  after:h-1
+  after:bg-gradient-to-r
+  after:from-blue-200
+  after:to-purple-200
+`;
+
 const leaveCardStyle = `
   bg-gradient-to-br from-blue-100 via-blue-50 to-white 
-  border-blue-300 
-  shadow-md 
+  border-blue-300
+  shadow-md
   hover:shadow-lg 
-  hover:-translate-y-1 
+  hover:-translate-y-0.5 
   transition-all duration-300
+  after:absolute
+  after:bottom-0
+  after:left-0
+  after:right-0
+  after:h-1
+  after:bg-gradient-to-r
+  after:from-blue-300
+  after:to-purple-300
 `;
 
 export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
@@ -116,6 +141,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       if (!response.ok) {
         throw new Error(await response.text());
       }
+
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
@@ -164,6 +191,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
             <Button
               variant="outline"
               className={cn(
+                cardStyle,
                 "justify-start text-left font-normal",
                 !currentDate && "text-muted-foreground"
               )}
@@ -207,8 +235,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
               <div
                 key={day.toISOString()}
                 className={cn(
-                  "p-1 md:p-2 rounded-lg border transition-all cursor-pointer relative group min-h-[80px] md:min-h-[100px]",
-                  hasLeave ? leaveCardStyle : "hover:bg-accent/50",
+                  "p-1 md:p-2 rounded-lg border transition-all cursor-pointer relative group min-h-[80px] md:min-h-[100px] overflow-hidden",
+                  hasLeave ? leaveCardStyle : cardStyle,
                   isUpdating && "opacity-50 pointer-events-none"
                 )}
                 onClick={() => {
