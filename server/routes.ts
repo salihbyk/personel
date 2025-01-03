@@ -1,19 +1,26 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { employees, leaves, salaries } from "@db/schema";
+import { employees, leaves } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // Employees
   app.get("/api/employees", async (_req, res) => {
-    const allEmployees = await db.query.employees.findMany({
-      with: {
-        salaries: true,
-        leaves: true,
-      },
-    });
+    const allEmployees = await db.query.employees.findMany();
     res.json(allEmployees);
+  });
+
+  app.get("/api/employees/:id", async (req, res) => {
+    const employee = await db.query.employees.findFirst({
+      where: eq(employees.id, parseInt(req.params.id)),
+    });
+
+    if (!employee) {
+      return res.status(404).send("Employee not found");
+    }
+
+    res.json(employee);
   });
 
   app.post("/api/employees", async (req, res) => {
@@ -36,12 +43,14 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Leaves
-  app.get("/api/leaves", async (_req, res) => {
+  app.get("/api/leaves", async (req, res) => {
+    const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+
     const allLeaves = await db.query.leaves.findMany({
-      with: {
-        employee: true,
-      },
+      where: employeeId ? eq(leaves.employeeId, employeeId) : undefined,
+      orderBy: (leaves, { desc }) => [desc(leaves.startDate)],
     });
+
     res.json(allLeaves);
   });
 
@@ -59,20 +68,6 @@ export function registerRoutes(app: Express): Server {
     res.json(leave[0]);
   });
 
-  // Salaries
-  app.get("/api/salaries", async (_req, res) => {
-    const allSalaries = await db.query.salaries.findMany({
-      with: {
-        employee: true,
-      },
-    });
-    res.json(allSalaries);
-  });
-
-  app.post("/api/salaries", async (req, res) => {
-    const salary = await db.insert(salaries).values(req.body).returning();
-    res.json(salary[0]);
-  });
 
   const httpServer = createServer(app);
   return httpServer;
