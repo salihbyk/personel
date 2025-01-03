@@ -32,7 +32,7 @@ export const inventoryItems = pgTable("inventory_items", {
   type: text("type").notNull(),
   condition: text("condition").notNull(),
   notes: text("notes"),
-  assignedTo: serial("assigned_to").references(() => employees.id),
+  assignedTo: serial("assigned_to").references(() => employees.id, { onDelete: 'set null' }).notNull(),
   assignedAt: timestamp("assigned_at"),
   returnedAt: timestamp("returned_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -63,7 +63,6 @@ export const performances = pgTable("performances", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// İlişkiler
 export const employeeRelations = relations(employees, ({ many }) => ({
   leaves: many(leaves),
   performances: many(performances),
@@ -91,7 +90,6 @@ export const inventoryItemRelations = relations(inventoryItems, ({ one }) => ({
   }),
 }));
 
-// Schema ve tip tanımlamaları
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export const insertEmployeeSchema = createInsertSchema(employees);
@@ -103,7 +101,6 @@ export const selectPerformanceSchema = createSelectSchema(performances);
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems);
 export const selectInventoryItemSchema = createSelectSchema(inventoryItems);
 
-// Tip tanımlamaları
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Employee = typeof employees.$inferSelect;

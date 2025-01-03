@@ -117,9 +117,26 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/inventory", async (req, res) => {
     try {
-      const item = await db.insert(inventoryItems).values(req.body).returning();
+      // Zorunlu alanları kontrol et
+      const { name, type, condition } = req.body;
+      if (!name || !type || !condition) {
+        return res.status(400).send("Zorunlu alanlar eksik: isim, tür ve durum gereklidir");
+      }
+
+      // Yeni envanter öğesini oluştur
+      const newItem = {
+        name,
+        type,
+        condition,
+        notes: req.body.notes || null,
+        assignedTo: req.body.assignedTo || null,
+        assignedAt: req.body.assignedTo ? new Date() : null,
+      };
+
+      const item = await db.insert(inventoryItems).values(newItem).returning();
       res.json(item[0]);
     } catch (error: any) {
+      console.error("Envanter ekleme hatası:", error);
       res.status(400).send("Envanter öğesi eklenemedi: " + error.message);
     }
   });
