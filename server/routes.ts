@@ -5,33 +5,14 @@ import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
-  // Basit auth kontrolü
-  const requireAuth = (req: any, res: any, next: any) => {
-    // Production'da auth kontrolünü geçici olarak bypass ediyoruz
-    if (process.env.NODE_ENV === 'production') {
-      return next();
-    }
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Unauthorized");
-    }
-    next();
-  };
-
-  // API rotaları
-  //Removed requireAuth middleware for production.
-  app.use("/api/employees");
-  app.use("/api/leaves");
-  app.use("/api/inventory");
-
-
   // Employees
   app.get("/api/employees", async (req, res) => {
     try {
       const allEmployees = await db.query.employees.findMany();
       res.json(allEmployees);
     } catch (error: any) {
-      res.status(500).send("Personel listesi alınamadı: " + error.message);
+      console.error("Employees error:", error);
+      res.status(500).json([]);
     }
   });
 
@@ -42,12 +23,13 @@ export function registerRoutes(app: Express): Server {
       });
 
       if (!employee) {
-        return res.status(404).send("Personel bulunamadı");
+        return res.status(404).json([]);
       }
 
       res.json(employee);
     } catch (error: any) {
-      res.status(500).send("Personel bilgisi alınamadı: " + error.message);
+      console.error("Employee detail error:", error);
+      res.status(500).json([]);
     }
   });
 
@@ -56,7 +38,8 @@ export function registerRoutes(app: Express): Server {
       const employee = await db.insert(employees).values(req.body).returning();
       res.json(employee[0]);
     } catch (error: any) {
-      res.status(400).send("Personel eklenemedi: " + error.message);
+      console.error("Employee create error:", error);
+      res.status(400).json(null);
     }
   });
 
@@ -69,7 +52,8 @@ export function registerRoutes(app: Express): Server {
         .returning();
       res.json(employee[0]);
     } catch (error: any) {
-      res.status(400).send("Personel güncellenemedi: " + error.message);
+      console.error("Employee update error:", error);
+      res.status(400).json(null);
     }
   });
 
@@ -81,7 +65,8 @@ export function registerRoutes(app: Express): Server {
         .returning();
       res.json({ message: "Personel silindi" });
     } catch (error: any) {
-      res.status(400).send("Personel silinemedi: " + error.message);
+      console.error("Employee delete error:", error);
+      res.status(400).json(null);
     }
   });
 
@@ -95,7 +80,8 @@ export function registerRoutes(app: Express): Server {
       });
       res.json(allLeaves);
     } catch (error: any) {
-      res.status(500).send("İzin listesi alınamadı: " + error.message);
+      console.error("Leaves error:", error);
+      res.status(500).json([]);
     }
   });
 
@@ -104,7 +90,8 @@ export function registerRoutes(app: Express): Server {
       const leave = await db.insert(leaves).values(req.body).returning();
       res.json(leave[0]);
     } catch (error: any) {
-      res.status(400).send("İzin eklenemedi: " + error.message);
+      console.error("Leave create error:", error);
+      res.status(400).json(null);
     }
   });
 
@@ -115,17 +102,17 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).send("İzin bulunamadı");
+        return res.status(404).json(null);
       }
 
-      res.json({ message: "İzin silindi", leave: result[0] });
+      res.json({ success: true });
     } catch (error: any) {
-      console.error("İzin silme hatası:", error);
-      res.status(500).send("İzin silinemedi: " + error.message);
+      console.error("Leave delete error:", error);
+      res.status(500).json(null);
     }
   });
 
-  // Inventory Items (Envanter)
+  // Inventory
   app.get("/api/inventory", async (req, res) => {
     try {
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
@@ -135,7 +122,8 @@ export function registerRoutes(app: Express): Server {
       });
       res.json(items);
     } catch (error: any) {
-      res.status(500).send("Envanter listesi alınamadı: " + error.message);
+      console.error("Inventory error:", error);
+      res.status(500).json([]);
     }
   });
 
@@ -144,7 +132,7 @@ export function registerRoutes(app: Express): Server {
       const { name, notes } = req.body;
 
       if (!name) {
-        return res.status(400).send("Eşya adı gereklidir");
+        return res.status(400).json(null);
       }
 
       const newItem = {
@@ -159,8 +147,8 @@ export function registerRoutes(app: Express): Server {
       const item = await db.insert(inventoryItems).values(newItem).returning();
       res.json(item[0]);
     } catch (error: any) {
-      console.error("Envanter ekleme hatası:", error);
-      res.status(400).send("Envanter öğesi eklenemedi: " + error.message);
+      console.error("Inventory create error:", error);
+      res.status(400).json(null);
     }
   });
 
@@ -169,26 +157,23 @@ export function registerRoutes(app: Express): Server {
       const { name, notes } = req.body;
 
       if (!name) {
-        return res.status(400).send("Eşya adı gereklidir");
+        return res.status(400).json(null);
       }
 
       const item = await db
         .update(inventoryItems)
-        .set({
-          name,
-          notes: notes || null,
-        })
+        .set({ name, notes: notes || null })
         .where(eq(inventoryItems.id, parseInt(req.params.id)))
         .returning();
 
       if (item.length === 0) {
-        return res.status(404).send("Envanter öğesi bulunamadı");
+        return res.status(404).json(null);
       }
 
       res.json(item[0]);
     } catch (error: any) {
-      console.error("Envanter güncelleme hatası:", error);
-      res.status(500).send("Envanter öğesi güncellenemedi: " + error.message);
+      console.error("Inventory update error:", error);
+      res.status(500).json(null);
     }
   });
 
@@ -200,13 +185,13 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).send("Envanter öğesi bulunamadı");
+        return res.status(404).json(null);
       }
 
-      res.json({ message: "Envanter öğesi silindi", item: result[0] });
+      res.json({ success: true });
     } catch (error: any) {
-      console.error("Envanter silme hatası:", error);
-      res.status(500).send("Envanter öğesi silinemedi: " + error.message);
+      console.error("Inventory delete error:", error);
+      res.status(500).json(null);
     }
   });
 

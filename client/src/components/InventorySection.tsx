@@ -87,6 +87,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       });
       setIsOpen(false);
       form.reset();
+      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -121,6 +122,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       setSelectedItem(null);
       setIsOpen(false);
       form.reset();
+      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -151,6 +153,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       });
       setShowDeleteDialog(false);
       setSelectedItem(null);
+      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -205,7 +208,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
             items?.map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-lg border space-y-2 relative group bg-gradient-to-br from-white via-gray-50 to-white border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                className="p-4 rounded-lg border-2 border-gray-300 space-y-2 relative group bg-gradient-to-br from-white via-gray-50 to-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
               >
                 <div className="flex justify-between items-start">
                   <div>

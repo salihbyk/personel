@@ -10,39 +10,31 @@ export const queryClient = new QueryClient({
           });
 
           if (!res.ok) {
-            if (process.env.NODE_ENV === 'production') {
-              // Production modunda API hatalarını yoksay ve boş veri döndür
-              return [];
-            }
-
             if (res.status >= 500) {
-              throw new Error(`${res.status}: ${res.statusText}`);
+              throw new Error(`Sunucu hatası: ${res.status}`);
             }
 
-            throw new Error(`${res.status}: ${await res.text()}`);
+            const errorText = await res.text();
+            throw new Error(errorText || `İstek hatası: ${res.status}`);
           }
 
           return res.json();
-        } catch (error) {
-          if (process.env.NODE_ENV === 'production') {
-            console.error('API Error:', error);
-            return [];
-          }
+        } catch (error: any) {
+          console.error('API Hatası:', error);
           throw error;
         }
       },
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
-      retry: process.env.NODE_ENV === 'production' ? 3 : false,
-      retryDelay: 1000,
+      retry: 1,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
-      retry: false,
+      retry: 1,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       onError: (error: any) => {
-        if (process.env.NODE_ENV === 'production') {
-          console.error('Mutation Error:', error);
-        }
+        console.error('Mutation Hatası:', error);
       }
     }
   },

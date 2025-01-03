@@ -10,6 +10,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// CORS ayarları
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 // İstek loglama middleware'i
 app.use((req, res, next) => {
   const start = Date.now();
@@ -44,13 +52,8 @@ app.use((req, res, next) => {
 (async () => {
   try {
     // Veritabanı bağlantısını kontrol et
-    try {
-      await db.query.users.findFirst();
-      log("Veritabanı bağlantısı başarılı");
-    } catch (error) {
-      log("Veritabanı bağlantı hatası:");
-      console.error(error);
-    }
+    await db.query.employees.findMany().execute();
+    log("Veritabanı bağlantısı başarılı");
 
     // Route'ları kaydet
     const server = registerRoutes(app);
@@ -59,12 +62,7 @@ app.use((req, res, next) => {
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Sunucu Hatası";
-
       log(`Hata: ${status} - ${message}`);
-      if (err.stack) {
-        log(`Stack: ${err.stack}`);
-      }
-
       res.status(status).json({ message });
     });
 
@@ -73,7 +71,7 @@ app.use((req, res, next) => {
       await setupVite(app, server);
     } else {
       // Production modunda statik dosyaları serve et
-      const distPath = path.resolve(__dirname, "public");
+      const distPath = path.resolve("dist/public");
       app.use(express.static(distPath));
 
       // Client-side routing için tüm istekleri index.html'e yönlendir
@@ -84,9 +82,9 @@ app.use((req, res, next) => {
       });
     }
 
-    const PORT = 5000;
+    const PORT = process.env.PORT || 5000;
     server.listen(PORT, "0.0.0.0", () => {
-      log(`Server running on port ${PORT} in ${app.get("env")} mode`);
+      log(`Sunucu ${PORT} portunda ${app.get("env")} modunda çalışıyor`);
     });
   } catch (error) {
     log("Başlangıç hatası:");
