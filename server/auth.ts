@@ -5,9 +5,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
-import { eq } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -28,10 +26,12 @@ const crypto = {
   },
 };
 
-// extend express user object with our schema
 declare global {
   namespace Express {
-    interface User extends SelectUser { }
+    interface User {
+      id: number;
+      username: string;
+    }
   }
 }
 
@@ -78,7 +78,11 @@ export function setupAuth(app: Express) {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      done(null, { id: 1, username: "admin" });
+      if (id === 1) {
+        done(null, { id: 1, username: "admin" });
+      } else {
+        done(new Error("User not found"));
+      }
     } catch (err) {
       done(err);
     }
