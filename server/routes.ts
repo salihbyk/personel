@@ -135,7 +135,7 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/inventory", async (req, res) => {
     try {
-      const { name, notes, assignedTo } = req.body;
+      const { name, notes } = req.body;
 
       if (!name) {
         return res.status(400).send("Eşya adı gereklidir");
@@ -146,8 +146,8 @@ export function registerRoutes(app: Express): Server {
         notes: notes || null,
         type: "diğer",
         condition: "yeni",
-        assignedTo: assignedTo || null,
-        assignedAt: assignedTo ? new Date() : null,
+        assignedTo: req.body.assignedTo || null,
+        assignedAt: req.body.assignedTo ? new Date() : null,
       };
 
       const item = await db.insert(inventoryItems).values(newItem).returning();
@@ -155,6 +155,54 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Envanter ekleme hatası:", error);
       res.status(400).send("Envanter öğesi eklenemedi: " + error.message);
+    }
+  });
+
+  // Envanter güncelleme endpoint'i
+  app.put("/api/inventory/:id", async (req, res) => {
+    try {
+      const { name, notes } = req.body;
+
+      if (!name) {
+        return res.status(400).send("Eşya adı gereklidir");
+      }
+
+      const item = await db
+        .update(inventoryItems)
+        .set({
+          name,
+          notes: notes || null,
+        })
+        .where(eq(inventoryItems.id, parseInt(req.params.id)))
+        .returning();
+
+      if (item.length === 0) {
+        return res.status(404).send("Envanter öğesi bulunamadı");
+      }
+
+      res.json(item[0]);
+    } catch (error: any) {
+      console.error("Envanter güncelleme hatası:", error);
+      res.status(500).send("Envanter öğesi güncellenemedi: " + error.message);
+    }
+  });
+
+  // Envanter silme endpoint'i
+  app.delete("/api/inventory/:id", async (req, res) => {
+    try {
+      const result = await db
+        .delete(inventoryItems)
+        .where(eq(inventoryItems.id, parseInt(req.params.id)))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).send("Envanter öğesi bulunamadı");
+      }
+
+      res.json({ message: "Envanter öğesi silindi", item: result[0] });
+    } catch (error: any) {
+      console.error("Envanter silme hatası:", error);
+      res.status(500).send("Envanter öğesi silinemedi: " + error.message);
     }
   });
 
