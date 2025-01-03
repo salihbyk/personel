@@ -94,7 +94,7 @@ app.use((req, res, next) => {
 
     const PORT = 5000;
     server.listen(PORT, "0.0.0.0", () => {
-      log(`Sunucu ${PORT} portunda çalışıyor`);
+      log(`Server running on port ${PORT}`);
     });
   } catch (error) {
     log("Başlangıç hatası:");
