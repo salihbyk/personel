@@ -1,4 +1,4 @@
-import { pgTable, text, serial, date, numeric, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, date, numeric, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
@@ -28,8 +28,22 @@ export const leaves = pgTable("leaves", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const performances = pgTable("performances", {
+  id: serial("id").primaryKey(),
+  employeeId: serial("employee_id").references(() => employees.id).notNull(),
+  date: date("date").notNull(),
+  type: text("type").notNull(), // review, achievement, warning, goal
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  rating: numeric("rating"), // 1-5 rating for reviews
+  metrics: jsonb("metrics"), // Flexible metrics storage
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const employeeRelations = relations(employees, ({ many }) => ({
   leaves: many(leaves),
+  performances: many(performances),
 }));
 
 export const leaveRelations = relations(leaves, ({ one }) => ({
@@ -39,12 +53,23 @@ export const leaveRelations = relations(leaves, ({ one }) => ({
   }),
 }));
 
+export const performanceRelations = relations(performances, ({ one }) => ({
+  employee: one(employees, {
+    fields: [performances.employeeId],
+    references: [employees.id],
+  }),
+}));
+
 export const insertEmployeeSchema = createInsertSchema(employees);
 export const selectEmployeeSchema = createSelectSchema(employees);
 export const insertLeaveSchema = createInsertSchema(leaves);
 export const selectLeaveSchema = createSelectSchema(leaves);
+export const insertPerformanceSchema = createInsertSchema(performances);
+export const selectPerformanceSchema = createSelectSchema(performances);
 
 export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
 export type Leave = typeof leaves.$inferSelect;
 export type NewLeave = typeof leaves.$inferInsert;
+export type Performance = typeof performances.$inferSelect;
+export type NewPerformance = typeof performances.$inferInsert;

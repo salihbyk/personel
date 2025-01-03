@@ -149,7 +149,8 @@ export default function EmployeeDetail() {
                     className="p-4 rounded-lg border"
                   >
                     <div className="font-medium">
-                      {format(new Date(leave.startDate), "d MMMM yyyy", { locale: tr })}
+                      {format(new Date(leave.startDate), "d MMMM yyyy", { locale: tr })} -{" "}
+                      {format(new Date(leave.endDate), "d MMMM yyyy", { locale: tr })}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
                       {leave.reason}
