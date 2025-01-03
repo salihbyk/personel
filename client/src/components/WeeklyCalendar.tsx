@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { addDays, format, startOfWeek } from "date-fns";
-import { tr } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -19,16 +20,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
+import { Calendar as CalendarIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { format, addDays, startOfWeek } from "date-fns";
+import { tr } from "date-fns/locale";
 import type { Employee, Leave } from "@db/schema";
 
 interface WeeklyCalendarProps {
@@ -40,12 +47,13 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
   const [note, setNote] = useState("");
   const [days, setDays] = useState("1");
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const { toast } = useToast();
 
-  const startDate = startOfWeek(new Date(), { locale: tr });
+  const startDate = startOfWeek(currentDate, { locale: tr });
   const weekDays = [...Array(7)].map((_, i) => addDays(startDate, i));
 
-  const { data: leaves } = useQuery<Leave[]>({
+  const { data: leaves, refetch } = useQuery<Leave[]>({
     queryKey: [`/api/leaves?employeeId=${employee.id}`],
   });
 
@@ -72,6 +80,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       setSelectedDate(null);
       setNote("");
       setDays("1");
+      refetch();
     },
     onError: (error) => {
       toast({
@@ -99,6 +108,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
         description: "İzin silindi",
       });
       setSelectedLeave(null);
+      refetch();
     },
     onError: (error) => {
       toast({
@@ -131,6 +141,35 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
 
   return (
     <>
+      <div className="flex items-center justify-between mb-4">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "justify-start text-left font-normal",
+                !currentDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {currentDate ? (
+                format(currentDate, "MMMM yyyy", { locale: tr })
+              ) : (
+                <span>Tarih Seç</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={currentDate}
+              onSelect={(date) => date && setCurrentDate(date)}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day) => {
           const leave = getLeave(day);
@@ -185,7 +224,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       </div>
 
       <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>
               İzin Ekle

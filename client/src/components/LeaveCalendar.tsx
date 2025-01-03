@@ -6,9 +6,16 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { format, addDays } from "date-fns";
+import { tr } from "date-fns/locale";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -19,25 +26,27 @@ interface LeaveCalendarProps {
 }
 
 export default function LeaveCalendar({ employees }: LeaveCalendarProps) {
-  const [selected, setSelected] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [note, setNote] = useState("");
+  const [days, setDays] = useState("1");
   const { toast } = useToast();
 
-  const { data: leaves } = useQuery<Leave[]>({
+  const { data: leaves, refetch } = useQuery<Leave[]>({
     queryKey: ["/api/leaves"],
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: Partial<Leave>) => {
+    mutationFn: async (data: { employeeId: number; startDate: string; endDate: string; reason: string; type: string; status: string }) => {
       const response = await fetch("/api/leaves", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -46,6 +55,10 @@ export default function LeaveCalendar({ employees }: LeaveCalendarProps) {
         title: "Success",
         description: "Leave request submitted successfully",
       });
+      setSelectedDate(undefined);
+      setNote("");
+      setDays("1");
+      refetch();
     },
     onError: (error) => {
       toast({
@@ -76,29 +89,32 @@ export default function LeaveCalendar({ employees }: LeaveCalendarProps) {
         <div className="cursor-pointer">
           <Calendar
             mode="single"
-            selected={selected}
-            onSelect={setSelected}
+            selected={selectedDate}
+            onSelect={setSelectedDate}
             modifiers={modifiers}
             modifiersStyles={modifiersStyles}
             className="rounded-md border"
+            locale={tr}
+            showOutsideDays={true}
+            fixedWeeks={true}
           />
         </div>
       </DialogTrigger>
-      
+
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Leaves for {selected && format(selected, "MMMM d, yyyy")}
+            İzinler - {selectedDate && format(selectedDate, "MMMM d, yyyy", { locale: tr })}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {leaves
             ?.filter(
               (leave) =>
-                selected &&
-                new Date(leave.startDate) <= selected &&
-                new Date(leave.endDate) >= selected
+                selectedDate &&
+                new Date(leave.startDate) <= selectedDate &&
+                new Date(leave.endDate) >= selectedDate
             )
             .map((leave) => {
               const employee = employees.find((e) => e.id === leave.employeeId);
@@ -112,8 +128,8 @@ export default function LeaveCalendar({ employees }: LeaveCalendarProps) {
                       {employee?.firstName} {employee?.lastName}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(leave.startDate), "MMM d")} -{" "}
-                      {format(new Date(leave.endDate), "MMM d, yyyy")}
+                      {format(new Date(leave.startDate), "MMM d", { locale: tr })} -{" "}
+                      {format(new Date(leave.endDate), "MMM d, yyyy", { locale: tr })}
                     </p>
                   </div>
                   <Badge>{leave.type}</Badge>
@@ -121,6 +137,12 @@ export default function LeaveCalendar({ employees }: LeaveCalendarProps) {
               );
             })}
         </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setSelectedDate(undefined)}>
+            Kapat
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
