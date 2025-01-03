@@ -6,12 +6,28 @@ import { WeeklyCalendar } from "@/components/WeeklyCalendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Users, CalendarDays } from "lucide-react";
-import type { Employee } from "@db/schema";
+import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
+import type { Employee, Leave } from "@db/schema";
 
 export default function Dashboard() {
   const { data: employees, isLoading } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
   });
+
+  const { data: leaves } = useQuery<Leave[]>({
+    queryKey: ["/api/leaves"],
+  });
+
+  // Bugün izinli olan personel sayısını hesapla
+  const todayLeaveCount = leaves?.filter(leave => {
+    const today = new Date();
+    const startDate = parseISO(leave.startDate);
+    const endDate = parseISO(leave.endDate);
+    return isWithinInterval(today, { 
+      start: startOfDay(startDate),
+      end: endOfDay(endDate)
+    });
+  }).length || 0;
 
   if (isLoading) {
     return (
@@ -44,7 +60,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-500">Bugün İzinli</div>
-                <div className="text-2xl font-semibold">0</div>
+                <div className="text-2xl font-semibold">{todayLeaveCount}</div>
               </div>
             </CardContent>
           </Card>

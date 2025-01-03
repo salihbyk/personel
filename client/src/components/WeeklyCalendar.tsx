@@ -34,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
-import { format, addDays, startOfWeek, isWithinInterval } from "date-fns";
+import { format, addDays, startOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { Employee, Leave } from "@db/schema";
 
@@ -78,6 +78,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
       queryClient.invalidateQueries({ queryKey: [`/api/leaves?employeeId=${employee.id}`] });
       toast({
         title: "Başarılı",
@@ -108,6 +109,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
       queryClient.invalidateQueries({ queryKey: [`/api/leaves?employeeId=${employee.id}`] });
       toast({
         title: "Başarılı",
@@ -128,8 +130,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const isLeaveDay = (date: Date) => {
     return leaves?.some(
       (leave) => {
-        const startDate = new Date(leave.startDate);
-        const endDate = new Date(leave.endDate);
+        const startDate = parseISO(leave.startDate);
+        const endDate = parseISO(leave.endDate);
         return isWithinInterval(date, { start: startDate, end: endDate });
       }
     );
@@ -138,8 +140,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const getLeave = (date: Date) => {
     return leaves?.find(
       (leave) => {
-        const startDate = new Date(leave.startDate);
-        const endDate = new Date(leave.endDate);
+        const startDate = parseISO(leave.startDate);
+        const endDate = parseISO(leave.endDate);
         return isWithinInterval(date, { start: startDate, end: endDate });
       }
     );
@@ -283,8 +285,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   const endDate = addDays(selectedDate, Number(days) - 1);
                   createMutation.mutate({
                     employeeId: employee.id,
-                    startDate: selectedDate.toISOString(),
-                    endDate: endDate.toISOString(),
+                    startDate: format(selectedDate, "yyyy-MM-dd"),
+                    endDate: format(endDate, "yyyy-MM-dd"),
                     reason: note,
                     type: "izin",
                     status: "onaylandı",
