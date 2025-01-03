@@ -3,13 +3,13 @@ import { z } from "zod";
 export const employeeSchema = z.object({
   firstName: z.string().min(1, "Ad gereklidir"),
   lastName: z.string().min(1, "Soyad gereklidir"),
-  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  email: z.string().optional(),
   phone: z.string().min(1, "Telefon numarası gereklidir"),
-  address: z.string().min(1, "Adres gereklidir"),
-  position: z.string().min(1, "Pozisyon gereklidir"),
-  department: z.string().min(1, "Departman gereklidir"),
+  address: z.string().optional(),
+  position: z.string().optional(),
+  department: z.string().optional(),
   salary: z.string().min(1, "Maaş gereklidir").transform((val) => parseFloat(val)),
-  joinDate: z.string().min(1, "İşe başlama tarihi gereklidir"),
+  joinDate: z.string().optional(),
 });
 
 export const leaveSchema = z.object({

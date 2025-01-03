@@ -25,15 +25,6 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/employees", async (req, res) => {
     try {
-      // Check if email already exists
-      const existingEmployee = await db.query.employees.findFirst({
-        where: eq(employees.email, req.body.email),
-      });
-
-      if (existingEmployee) {
-        return res.status(400).send("Bu e-posta adresi zaten kullanımda");
-      }
-
       const employee = await db.insert(employees).values(req.body).returning();
       res.json(employee[0]);
     } catch (error: any) {
@@ -43,17 +34,6 @@ export function registerRoutes(app: Express): Server {
 
   app.put("/api/employees/:id", async (req, res) => {
     try {
-      // If email is being updated, check if new email already exists
-      if (req.body.email) {
-        const existingEmployee = await db.query.employees.findFirst({
-          where: eq(employees.email, req.body.email),
-        });
-
-        if (existingEmployee && existingEmployee.id !== parseInt(req.params.id)) {
-          return res.status(400).send("Bu e-posta adresi zaten kullanımda");
-        }
-      }
-
       const employee = await db
         .update(employees)
         .set(req.body)
