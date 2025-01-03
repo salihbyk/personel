@@ -1,14 +1,16 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { db } from "@db";
 import { setupAuth } from "./auth";
+import { db } from "@db";
 
 const app = express();
+
+// Temel middleware kurulumu
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Request logging middleware
+// İstek loglama middleware'i
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -41,13 +43,34 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Setup auth before routes
+    // Veritabanı bağlantısını kontrol et ve yeniden deneme mekanizması
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        await db.query.users.findFirst();
+        log("Veritabanı bağlantısı başarılı");
+        break;
+      } catch (error) {
+        retryCount++;
+        log(`Veritabanı bağlantı denemesi ${retryCount}/${maxRetries} başarısız:`);
+        console.error(error);
+
+        if (retryCount === maxRetries) {
+          log("Maksimum bağlantı denemesi aşıldı, uygulama kapatılıyor.");
+          process.exit(1);
+        }
+
+        // 5 saniye bekle ve tekrar dene
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
+
+    // Auth sistemi kurulumu
     setupAuth(app);
 
-    // Veritabanı bağlantısını kontrol et
-    await db.query.users.findFirst();
-    log("Veritabanı bağlantısı başarılı");
-
+    // Route'ları kaydet
     const server = registerRoutes(app);
 
     // Genel hata yakalayıcı

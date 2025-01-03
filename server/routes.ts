@@ -3,12 +3,8 @@ import { createServer, type Server } from "http";
 import { db } from "@db";
 import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq } from "drizzle-orm";
-import { setupAuth } from "./auth";
 
 export function registerRoutes(app: Express): Server {
-  // Auth sistemi kurulumu
-  setupAuth(app);
-
   // API güvenlik kontrolü
   const requireAuth = (req: any, res: any, next: any) => {
     if (!req.isAuthenticated()) {
