@@ -4,38 +4,27 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
-        try {
-          const res = await fetch(queryKey[0] as string, {
-            credentials: "include",
-          });
+        const res = await fetch(queryKey[0] as string, {
+          credentials: "include",
+        });
 
-          if (!res.ok) {
-            if (res.status >= 500) {
-              throw new Error(`Sunucu hatası: ${res.status}`);
-            }
-
-            const errorText = await res.text();
-            throw new Error(errorText || `İstek hatası: ${res.status}`);
+        if (!res.ok) {
+          if (res.status >= 500) {
+            throw new Error(`${res.status}: ${res.statusText}`);
           }
 
-          return res.json();
-        } catch (error: any) {
-          console.error('API Hatası:', error);
-          throw error;
+          throw new Error(`${res.status}: ${await res.text()}`);
         }
+
+        return res.json();
       },
+      refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60, // 1 dakika
-      cacheTime: 1000 * 60 * 5, // 5 dakika
-      retry: 1,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: Infinity,
+      retry: false,
     },
     mutations: {
-      retry: 1,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      onError: (error: any) => {
-        console.error('Mutation Hatası:', error);
-      }
+      retry: false,
     }
   },
 });

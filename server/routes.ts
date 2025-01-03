@@ -5,14 +5,26 @@ import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
+  // API güvenlik kontrolü
+  const requireAuth = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Giriş yapılmadı");
+    }
+    next();
+  };
+
+  // Tüm API rotalarında auth kontrolü
+  app.use("/api/employees", requireAuth);
+  app.use("/api/leaves", requireAuth);
+  app.use("/api/inventory", requireAuth);
+
   // Employees
   app.get("/api/employees", async (req, res) => {
     try {
       const allEmployees = await db.query.employees.findMany();
       res.json(allEmployees);
     } catch (error: any) {
-      console.error("Employees error:", error);
-      res.status(500).json([]);
+      res.status(500).send("Personel listesi alınamadı: " + error.message);
     }
   });
 
@@ -23,13 +35,12 @@ export function registerRoutes(app: Express): Server {
       });
 
       if (!employee) {
-        return res.status(404).json([]);
+        return res.status(404).send("Personel bulunamadı");
       }
 
       res.json(employee);
     } catch (error: any) {
-      console.error("Employee detail error:", error);
-      res.status(500).json([]);
+      res.status(500).send("Personel bilgisi alınamadı: " + error.message);
     }
   });
 
@@ -38,8 +49,7 @@ export function registerRoutes(app: Express): Server {
       const employee = await db.insert(employees).values(req.body).returning();
       res.json(employee[0]);
     } catch (error: any) {
-      console.error("Employee create error:", error);
-      res.status(400).json(null);
+      res.status(400).send("Personel eklenemedi: " + error.message);
     }
   });
 
@@ -52,8 +62,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
       res.json(employee[0]);
     } catch (error: any) {
-      console.error("Employee update error:", error);
-      res.status(400).json(null);
+      res.status(400).send("Personel güncellenemedi: " + error.message);
     }
   });
 
@@ -65,8 +74,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
       res.json({ message: "Personel silindi" });
     } catch (error: any) {
-      console.error("Employee delete error:", error);
-      res.status(400).json(null);
+      res.status(400).send("Personel silinemedi: " + error.message);
     }
   });
 
@@ -80,8 +88,7 @@ export function registerRoutes(app: Express): Server {
       });
       res.json(allLeaves);
     } catch (error: any) {
-      console.error("Leaves error:", error);
-      res.status(500).json([]);
+      res.status(500).send("İzin listesi alınamadı: " + error.message);
     }
   });
 
@@ -90,11 +97,11 @@ export function registerRoutes(app: Express): Server {
       const leave = await db.insert(leaves).values(req.body).returning();
       res.json(leave[0]);
     } catch (error: any) {
-      console.error("Leave create error:", error);
-      res.status(400).json(null);
+      res.status(400).send("İzin eklenemedi: " + error.message);
     }
   });
 
+  // İzin silme endpoint'i eklendi
   app.delete("/api/leaves/:id", async (req, res) => {
     try {
       const result = await db.delete(leaves)
@@ -102,27 +109,27 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).json(null);
+        return res.status(404).send("İzin bulunamadı");
       }
 
-      res.json({ success: true });
+      res.json({ message: "İzin silindi", leave: result[0] });
     } catch (error: any) {
-      console.error("Leave delete error:", error);
-      res.status(500).json(null);
+      console.error("İzin silme hatası:", error);
+      res.status(500).send("İzin silinemedi: " + error.message);
     }
   });
 
-  // Inventory
+  // Inventory Items (Envanter)
   app.get("/api/inventory", async (req, res) => {
     try {
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
       const items = await db.query.inventoryItems.findMany({
         where: employeeId ? eq(inventoryItems.assignedTo, employeeId) : undefined,
+        orderBy: (items, { desc }) => [desc(items.createdAt)],
       });
       res.json(items);
     } catch (error: any) {
-      console.error("Inventory error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).send("Envanter listesi alınamadı: " + error.message);
     }
   });
 
@@ -130,8 +137,8 @@ export function registerRoutes(app: Express): Server {
     try {
       const { name, notes, assignedTo } = req.body;
 
-      if (!name || !assignedTo) {
-        return res.status(400).json({ error: "Name and assignedTo are required" });
+      if (!name) {
+        return res.status(400).send("Eşya adı gereklidir");
       }
 
       const newItem = {
@@ -139,59 +146,15 @@ export function registerRoutes(app: Express): Server {
         notes: notes || null,
         type: "diğer",
         condition: "yeni",
-        assignedTo,
-        assignedAt: new Date(),
+        assignedTo: assignedTo || null,
+        assignedAt: assignedTo ? new Date() : null,
       };
 
       const item = await db.insert(inventoryItems).values(newItem).returning();
       res.json(item[0]);
     } catch (error: any) {
-      console.error("Inventory create error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.put("/api/inventory/:id", async (req, res) => {
-    try {
-      const { name, notes } = req.body;
-      const id = parseInt(req.params.id);
-
-      if (!name) {
-        return res.status(400).json({ error: "Name is required" });
-      }
-
-      const item = await db
-        .update(inventoryItems)
-        .set({ name, notes: notes || null })
-        .where(eq(inventoryItems.id, id))
-        .returning();
-
-      if (item.length === 0) {
-        return res.status(404).json({ error: "Item not found" });
-      }
-
-      res.json(item[0]);
-    } catch (error: any) {
-      console.error("Inventory update error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.delete("/api/inventory/:id", async (req, res) => {
-    try {
-      const result = await db
-        .delete(inventoryItems)
-        .where(eq(inventoryItems.id, parseInt(req.params.id)))
-        .returning();
-
-      if (result.length === 0) {
-        return res.status(404).json({ error: "Item not found" });
-      }
-
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("Inventory delete error:", error);
-      res.status(500).json({ error: error.message });
+      console.error("Envanter ekleme hatası:", error);
+      res.status(400).send("Envanter öğesi eklenemedi: " + error.message);
     }
   });
 

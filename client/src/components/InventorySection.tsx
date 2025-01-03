@@ -30,6 +30,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +46,22 @@ import { inventoryItemSchema } from "@/lib/schemas";
 import type { Employee, InventoryItem } from "@db/schema";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import type { z } from "zod";
+
+const itemTypes = [
+  { value: "laptop", label: "Dizüstü Bilgisayar" },
+  { value: "phone", label: "Telefon" },
+  { value: "tablet", label: "Tablet" },
+  { value: "key", label: "Anahtar" },
+  { value: "card", label: "Kart" },
+  { value: "other", label: "Diğer" },
+] as const;
+
+const itemConditions = [
+  { value: "yeni", label: "Yeni" },
+  { value: "iyi", label: "İyi" },
+  { value: "orta", label: "Orta" },
+  { value: "kötü", label: "Kötü" },
+] as const;
 
 type FormData = z.infer<typeof inventoryItemSchema>;
 
@@ -56,7 +79,11 @@ export function InventorySection({ employee }: InventorySectionProps) {
     resolver: zodResolver(inventoryItemSchema),
     defaultValues: {
       name: "",
+      type: "",
+      condition: "yeni",
       notes: "",
+      assignedTo: employee.id,
+      assignedAt: new Date().toISOString(),
     },
   });
 
@@ -69,11 +96,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       const response = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          assignedTo: employee.id
-        }),
-        credentials: 'include'
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -83,14 +106,13 @@ export function InventorySection({ employee }: InventorySectionProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/inventory?employeeId=${employee.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       toast({
         title: "Başarılı",
         description: "Zimmetli eşya eklendi",
       });
       setIsOpen(false);
       form.reset();
-      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -107,11 +129,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       const response = await fetch(`/api/inventory/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...rest,
-          assignedTo: employee.id
-        }),
-        credentials: 'include'
+        body: JSON.stringify(rest),
       });
 
       if (!response.ok) {
@@ -121,7 +139,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/inventory?employeeId=${employee.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       toast({
         title: "Başarılı",
         description: "Zimmetli eşya güncellendi",
@@ -129,7 +147,6 @@ export function InventorySection({ employee }: InventorySectionProps) {
       setSelectedItem(null);
       setIsOpen(false);
       form.reset();
-      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -144,24 +161,20 @@ export function InventorySection({ employee }: InventorySectionProps) {
     mutationFn: async (id: number) => {
       const response = await fetch(`/api/inventory/${id}`, {
         method: "DELETE",
-        credentials: 'include'
       });
 
       if (!response.ok) {
         throw new Error(await response.text());
       }
-
-      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/inventory?employeeId=${employee.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       toast({
         title: "Başarılı",
         description: "Zimmetli eşya silindi",
       });
       setShowDeleteDialog(false);
       setSelectedItem(null);
-      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -190,7 +203,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
             form.reset();
             setIsOpen(true);
           }}
-          className="gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
+          className="gap-2"
         >
           <Plus className="w-4 h-4" />
           Yeni Ekle
@@ -216,14 +229,14 @@ export function InventorySection({ employee }: InventorySectionProps) {
             items?.map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-lg border-2 border-gray-200 space-y-2 relative group bg-gradient-to-br from-white via-gray-50 to-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                className="p-4 rounded-lg border space-y-2 relative group"
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-medium text-gray-900">{item.name}</h4>
-                    {item.notes && (
-                      <p className="text-sm text-gray-600 mt-1">{item.notes}</p>
-                    )}
+                    <h4 className="font-medium">{item.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {itemTypes.find((t) => t.value === item.type)?.label}
+                    </p>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
@@ -233,13 +246,16 @@ export function InventorySection({ employee }: InventorySectionProps) {
                         setSelectedItem(item);
                         form.reset({
                           name: item.name,
+                          type: item.type,
+                          condition: item.condition as "yeni" | "iyi" | "orta" | "kötü",
                           notes: item.notes || "",
+                          assignedTo: item.assignedTo,
+                          assignedAt: item.assignedAt?.toString(),
                         });
                         setIsOpen(true);
                       }}
-                      className="hover:bg-blue-50"
                     >
-                      <Pencil className="w-4 h-4 text-blue-600" />
+                      <Pencil className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -248,18 +264,34 @@ export function InventorySection({ employee }: InventorySectionProps) {
                         setSelectedItem(item);
                         setShowDeleteDialog(true);
                       }}
-                      className="hover:bg-red-50"
                     >
-                      <Trash2 className="w-4 h-4 text-red-600" />
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {format(new Date(item.assignedAt!), "d MMMM yyyy", {
-                    locale: tr,
-                  })}
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">
+                    {format(new Date(item.assignedAt!), "d MMMM yyyy", {
+                      locale: tr,
+                    })}
+                  </span>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      item.condition === "yeni"
+                        ? "bg-green-100 text-green-800"
+                        : item.condition === "iyi"
+                        ? "bg-blue-100 text-blue-800"
+                        : item.condition === "orta"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {itemConditions.find((c) => c.value === item.condition)?.label}
+                  </span>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-300 to-purple-300" />
+                {item.notes && (
+                  <p className="text-sm text-muted-foreground">{item.notes}</p>
+                )}
               </div>
             ))
           )}
@@ -288,8 +320,58 @@ export function InventorySection({ employee }: InventorySectionProps) {
                   <FormItem>
                     <FormLabel>Eşya Adı</FormLabel>
                     <FormControl>
-                      <Input {...field} className="border-2 focus:border-blue-300" />
+                      <Input {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Eşya Türü</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seçiniz" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {itemTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="condition"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Durumu</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seçiniz" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {itemConditions.map((condition) => (
+                          <SelectItem key={condition.value} value={condition.value}>
+                            {condition.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -300,9 +382,9 @@ export function InventorySection({ employee }: InventorySectionProps) {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Not</FormLabel>
+                    <FormLabel>Notlar</FormLabel>
                     <FormControl>
-                      <Input {...field} className="border-2 focus:border-blue-300" />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -314,14 +396,12 @@ export function InventorySection({ employee }: InventorySectionProps) {
                   type="button"
                   variant="outline"
                   onClick={() => setIsOpen(false)}
-                  className="border-2"
                 >
                   İptal
                 </Button>
                 <Button
                   type="submit"
                   disabled={createMutation.isPending || updateMutation.isPending}
-                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
                     <div className="flex items-center gap-2">
@@ -352,7 +432,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-2">İptal</AlertDialogCancel>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (selectedItem) {

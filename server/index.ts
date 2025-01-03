@@ -1,22 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupAuth } from "./auth";
 import { db } from "@db";
-import path from "path";
 
 const app = express();
 
 // Temel middleware kurulumu
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
-// CORS ayarları
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-});
 
 // İstek loglama middleware'i
 app.use((req, res, next) => {
@@ -51,9 +43,32 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Veritabanı bağlantısını kontrol et
-    await db.query.employees.findMany().execute();
-    log("Veritabanı bağlantısı başarılı");
+    // Veritabanı bağlantısını kontrol et ve yeniden deneme mekanizması
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        await db.query.users.findFirst();
+        log("Veritabanı bağlantısı başarılı");
+        break;
+      } catch (error) {
+        retryCount++;
+        log(`Veritabanı bağlantı denemesi ${retryCount}/${maxRetries} başarısız:`);
+        console.error(error);
+
+        if (retryCount === maxRetries) {
+          log("Maksimum bağlantı denemesi aşıldı, uygulama kapatılıyor.");
+          process.exit(1);
+        }
+
+        // 5 saniye bekle ve tekrar dene
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
+
+    // Auth sistemi kurulumu
+    setupAuth(app);
 
     // Route'ları kaydet
     const server = registerRoutes(app);
@@ -62,30 +77,24 @@ app.use((req, res, next) => {
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Sunucu Hatası";
+
       log(`Hata: ${status} - ${message}`);
+      if (err.stack) {
+        log(`Stack: ${err.stack}`);
+      }
+
       res.status(status).json({ message });
     });
 
-    // Development modunda Vite'ı kur
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
-      // Production modunda statik dosyaları serve et
-      const distPath = path.resolve(__dirname, "public");
-      app.use(express.static(distPath));
-
-      // Client-side routing için tüm istekleri index.html'e yönlendir
-      app.get("*", (req, res) => {
-        if (!req.path.startsWith("/api")) {
-          res.sendFile(path.resolve(distPath, "index.html"));
-        }
-      });
+      serveStatic(app);
     }
 
-    // ALWAYS serve the app on port 5000
     const PORT = 5000;
     server.listen(PORT, "0.0.0.0", () => {
-      log(`Sunucu ${PORT} portunda ${app.get("env")} modunda çalışıyor`);
+      log(`Sunucu ${PORT} portunda çalışıyor`);
     });
   } catch (error) {
     log("Başlangıç hatası:");
