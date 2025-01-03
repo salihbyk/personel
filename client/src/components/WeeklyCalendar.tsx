@@ -42,6 +42,15 @@ interface WeeklyCalendarProps {
   employee: Employee;
 }
 
+const leaveCardStyle = `
+  bg-gradient-to-br from-blue-100 via-blue-50 to-white 
+  border-blue-300 
+  shadow-md 
+  hover:shadow-lg 
+  hover:-translate-y-1 
+  transition-all duration-300
+`;
+
 export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
@@ -198,8 +207,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
               <div
                 key={day.toISOString()}
                 className={cn(
-                  "p-1 md:p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative group min-h-[80px] md:min-h-[100px]",
-                  hasLeave ? "bg-gradient-to-br from-blue-50 to-white border-blue-200" : "hover:bg-accent/50",
+                  "p-1 md:p-2 rounded-lg border transition-all cursor-pointer relative group min-h-[80px] md:min-h-[100px]",
+                  hasLeave ? leaveCardStyle : "hover:bg-accent/50",
                   isUpdating && "opacity-50 pointer-events-none"
                 )}
                 onClick={() => {
@@ -224,7 +233,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                       <div className="hidden md:block">
                         <Badge 
                           variant="outline" 
-                          className="w-full text-[10px] py-0 border-blue-200 text-blue-600 bg-blue-50/50"
+                          className="w-full text-[10px] py-0 border-blue-300 text-blue-700 bg-blue-100"
                         >
                           İzinli
                         </Badge>
@@ -232,7 +241,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                       <div className="block md:hidden">
                         <Badge 
                           variant="outline" 
-                          className="w-6 h-6 p-0 flex items-center justify-center rounded-full border-blue-200 text-blue-600 bg-blue-50/50"
+                          className="w-6 h-6 p-0 flex items-center justify-center rounded-full border-blue-300 text-blue-700 bg-blue-100"
                         >
                           <Check className="h-3 w-3" />
                         </Badge>

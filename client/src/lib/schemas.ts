@@ -22,7 +22,9 @@ export const employeeSchema = z.object({
 
 export const inventoryItemSchema = z.object({
   name: z.string().min(1, "Eşya adı gereklidir"),
-  type: z.string().min(1, "Eşya türü gereklidir"),
+  type: z.enum(["araç", "takım sandığı", "telefon", "bilgisayar", "diğer"], {
+    errorMap: () => ({ message: "Lütfen eşya türünü seçin" }),
+  }),
   condition: z.enum(["yeni", "iyi", "orta", "kötü"], {
     errorMap: () => ({ message: "Lütfen eşyanın durumunu seçin" }),
   }),
