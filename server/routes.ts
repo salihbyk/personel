@@ -135,17 +135,17 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/inventory", async (req, res) => {
     try {
-      const { name, type, condition, assignedTo } = req.body;
+      const { name, notes, assignedTo } = req.body;
 
-      if (!name || !type || !condition) {
-        return res.status(400).send("Zorunlu alanlar eksik: isim, tür ve durum gereklidir");
+      if (!name) {
+        return res.status(400).send("Eşya adı gereklidir");
       }
 
       const newItem = {
         name,
-        type,
-        condition,
-        notes: req.body.notes || null,
+        notes: notes || null,
+        type: "diğer",
+        condition: "yeni",
         assignedTo: assignedTo || null,
         assignedAt: assignedTo ? new Date() : null,
       };
