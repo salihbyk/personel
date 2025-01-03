@@ -27,23 +27,23 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Global Search Bar */}
       <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-50 flex items-center px-4">
-        <div className="max-w-3xl mx-auto w-full flex items-center gap-4">
-          <Link href="/" className="flex-shrink-0">
+        <div className="max-w-5xl mx-auto w-full flex items-center gap-6">
+          <Link href="/" className="flex-shrink-0 -ml-2 transition-transform hover:scale-105">
             <img
               src="https://www.europatrans.com.tr/sitelogo.png.webp"
               alt="Logo"
               className="h-8 w-auto"
             />
           </Link>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="relative flex-1 group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-blue-500" />
             <Input
               placeholder="Tüm sistemde ara..."
-              className="pl-10 bg-gray-50 border-gray-200"
+              className="pl-10 bg-gray-50 border-gray-200 transition-all focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
           <Link href="/employee/new">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all hover:shadow-lg hover:-translate-y-0.5">
               <Plus className="h-4 w-4" />
               Yeni Personel
             </Button>
@@ -52,15 +52,15 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
       </div>
 
       {/* Sidebar */}
-      <div className="w-72 bg-white border-r border-gray-200 pt-16">
+      <div className="w-72 bg-white border-r border-gray-200 pt-16 transition-all">
         <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-blue-500" />
             <Input
               placeholder="Personel ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-50 border-gray-200"
+              className="pl-10 bg-gray-50 border-gray-200 transition-all focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
         </div>
@@ -76,7 +76,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                   <Link key={employee.id} href={`/employee/${employee.id}`}>
                     <Button
                       variant={location === `/employee/${employee.id}` ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2 text-gray-700 h-auto py-3"
+                      className="w-full justify-start gap-2 text-gray-700 h-auto py-3 transition-all hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <UserRound className="h-4 w-4 flex-shrink-0" />
                       <div className="flex-1 text-left">
@@ -107,7 +107,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50 pt-16">
-        {children}
+        <div className="animate-fadeIn"> {children} </div>
       </main>
     </div>
   );

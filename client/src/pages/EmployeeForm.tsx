@@ -219,11 +219,26 @@ export default function EmployeeForm() {
                 />
 
                 <div className="flex justify-end gap-4">
-                  <Button variant="outline" onClick={() => setLocation("/")}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation("/")}
+                    className="transition-all hover:shadow-md hover:-translate-y-0.5"
+                  >
                     İptal
                   </Button>
-                  <Button type="submit" disabled={mutation.isPending}>
-                    {mutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+                  <Button
+                    type="submit"
+                    disabled={mutation.isPending}
+                    className="transition-all hover:shadow-lg hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {mutation.isPending ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        Kaydediliyor...
+                      </div>
+                    ) : (
+                      "Kaydet"
+                    )}
                   </Button>
                 </div>
               </form>
