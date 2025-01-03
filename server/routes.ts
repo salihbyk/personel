@@ -24,17 +24,45 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/employees", async (req, res) => {
-    const employee = await db.insert(employees).values(req.body).returning();
-    res.json(employee[0]);
+    try {
+      // Check if email already exists
+      const existingEmployee = await db.query.employees.findFirst({
+        where: eq(employees.email, req.body.email),
+      });
+
+      if (existingEmployee) {
+        return res.status(400).send("Bu e-posta adresi zaten kullanımda");
+      }
+
+      const employee = await db.insert(employees).values(req.body).returning();
+      res.json(employee[0]);
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
   });
 
   app.put("/api/employees/:id", async (req, res) => {
-    const employee = await db
-      .update(employees)
-      .set(req.body)
-      .where(eq(employees.id, parseInt(req.params.id)))
-      .returning();
-    res.json(employee[0]);
+    try {
+      // If email is being updated, check if new email already exists
+      if (req.body.email) {
+        const existingEmployee = await db.query.employees.findFirst({
+          where: eq(employees.email, req.body.email),
+        });
+
+        if (existingEmployee && existingEmployee.id !== parseInt(req.params.id)) {
+          return res.status(400).send("Bu e-posta adresi zaten kullanımda");
+        }
+      }
+
+      const employee = await db
+        .update(employees)
+        .set(req.body)
+        .where(eq(employees.id, parseInt(req.params.id)))
+        .returning();
+      res.json(employee[0]);
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
   });
 
   app.delete("/api/employees/:id", async (req, res) => {
@@ -67,7 +95,6 @@ export function registerRoutes(app: Express): Server {
       .returning();
     res.json(leave[0]);
   });
-
 
   const httpServer = createServer(app);
   return httpServer;
