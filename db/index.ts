@@ -1,6 +1,5 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
-import ws from "ws";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import * as schema from "@db/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -9,16 +8,11 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Veritabanı havuzu oluştur
-const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  ssl: true,
-  connectionTimeoutMillis: 5000,
-  wsClient: ws,
-});
+// Create the database connection
+const sql = neon(process.env.DATABASE_URL);
 
-// Drizzle ORM instance'ı oluştur
-export const db = drizzle(pool, { 
+// Create Drizzle ORM instance
+export const db = drizzle(sql, { 
   schema,
   logger: true,
 });
