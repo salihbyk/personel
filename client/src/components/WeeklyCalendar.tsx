@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Calendar as CalendarIcon, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -180,16 +180,16 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       </div>
 
       {leavesLoading ? (
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 md:gap-2">
           {[...Array(7)].map((_, i) => (
             <div
               key={i}
-              className="h-20 bg-gray-100 rounded-lg animate-pulse"
+              className="h-16 bg-gray-100 rounded-lg animate-pulse"
             />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 md:gap-2">
           {weekDays.map((day) => {
             const leave = getLeave(day);
             const hasLeave = !!leave;
@@ -198,8 +198,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
               <div
                 key={day.toISOString()}
                 className={cn(
-                  "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative group",
-                  hasLeave ? "bg-yellow-100 border-yellow-300" : "hover:bg-accent/50",
+                  "p-1 md:p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative group min-h-[80px] md:min-h-[100px]",
+                  hasLeave ? "bg-gradient-to-br from-blue-50 to-white border-blue-200" : "hover:bg-accent/50",
                   isUpdating && "opacity-50 pointer-events-none"
                 )}
                 onClick={() => {
@@ -221,9 +221,22 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   </div>
                   {hasLeave && (
                     <>
-                      <Badge variant="outline" className="w-full text-[10px] py-0">
-                        İzinli
-                      </Badge>
+                      <div className="hidden md:block">
+                        <Badge 
+                          variant="outline" 
+                          className="w-full text-[10px] py-0 border-blue-200 text-blue-600 bg-blue-50/50"
+                        >
+                          İzinli
+                        </Badge>
+                      </div>
+                      <div className="block md:hidden">
+                        <Badge 
+                          variant="outline" 
+                          className="w-6 h-6 p-0 flex items-center justify-center rounded-full border-blue-200 text-blue-600 bg-blue-50/50"
+                        >
+                          <Check className="h-3 w-3" />
+                        </Badge>
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -317,6 +330,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   deleteMutation.mutate(selectedLeave.id);
                 }
               }}
+              className="bg-red-600 hover:bg-red-700"
             >
               Evet, Sil
             </AlertDialogAction>
