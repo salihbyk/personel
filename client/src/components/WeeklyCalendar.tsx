@@ -48,28 +48,34 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const [note, setNote] = useState("");
   const [days, setDays] = useState("1");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
   const startDate = startOfWeek(currentDate, { locale: tr });
   const weekDays = [...Array(7)].map((_, i) => addDays(startDate, i));
 
-  const { data: leaves, refetch } = useQuery<Leave[]>({
+  const { data: leaves, refetch, isLoading: leavesLoading } = useQuery<Leave[]>({
     queryKey: [`/api/leaves?employeeId=${employee.id}`],
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: { employeeId: number; startDate: string; endDate: string; reason: string; type: string; status: string }) => {
-      const response = await fetch("/api/leaves", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      setIsUpdating(true);
+      try {
+        const response = await fetch("/api/leaves", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        return response.json();
+      } finally {
+        setIsUpdating(false);
       }
-
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/leaves?employeeId=${employee.id}`] });
@@ -171,58 +177,70 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
         </Popover>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
-        {weekDays.map((day) => {
-          const leave = getLeave(day);
-          const hasLeave = !!leave;
-
-          return (
+      {leavesLoading ? (
+        <div className="grid grid-cols-7 gap-2">
+          {[...Array(7)].map((_, i) => (
             <div
-              key={day.toISOString()}
-              className={cn(
-                "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative group",
-                hasLeave ? "bg-yellow-100 border-yellow-300" : "hover:bg-accent/50"
-              )}
-              onClick={() => {
-                if (!hasLeave) {
-                  setSelectedDate(day);
-                } else {
-                  toast({
-                    description: `Not: ${leave?.reason}`,
-                  });
-                }
-              }}
-            >
-              <div className="text-center space-y-1">
-                <div className="text-sm font-medium">
-                  {format(day, "EEE", { locale: tr })}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {format(day, "d", { locale: tr })}
-                </div>
-                {hasLeave && (
-                  <>
-                    <Badge variant="outline" className="w-full text-[10px] py-0">
-                      İzinli
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-1 right-1 h-4 w-4 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedLeave(leave);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </>
+              key={i}
+              className="h-20 bg-gray-100 rounded-lg animate-pulse"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-7 gap-2">
+          {weekDays.map((day) => {
+            const leave = getLeave(day);
+            const hasLeave = !!leave;
+
+            return (
+              <div
+                key={day.toISOString()}
+                className={cn(
+                  "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative group",
+                  hasLeave ? "bg-yellow-100 border-yellow-300" : "hover:bg-accent/50",
+                  isUpdating && "opacity-50 pointer-events-none"
                 )}
+                onClick={() => {
+                  if (!hasLeave) {
+                    setSelectedDate(day);
+                  } else {
+                    toast({
+                      description: `Not: ${leave?.reason}`,
+                    });
+                  }
+                }}
+              >
+                <div className="text-center space-y-1">
+                  <div className="text-sm font-medium">
+                    {format(day, "EEE", { locale: tr })}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {format(day, "d", { locale: tr })}
+                  </div>
+                  {hasLeave && (
+                    <>
+                      <Badge variant="outline" className="w-full text-[10px] py-0">
+                        İzinli
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-4 w-4 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedLeave(leave);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
         <DialogContent>
@@ -273,7 +291,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   });
                 }
               }}
-              disabled={createMutation.isPending || !note.trim()}
+              disabled={createMutation.isPending || !note.trim() || isUpdating}
             >
               {createMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>

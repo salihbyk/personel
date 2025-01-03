@@ -67,8 +67,13 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
         <ScrollArea className="h-[calc(100vh-8rem)]">
           <div className="p-2">
             {isLoading ? (
-              <div className="flex items-center justify-center h-20">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+              <div className="space-y-2 p-4">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-16 bg-gray-100 rounded-lg animate-pulse"
+                  />
+                ))}
               </div>
             ) : (
               <div className="space-y-1">
