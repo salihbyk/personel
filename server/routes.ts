@@ -3,8 +3,12 @@ import { createServer, type Server } from "http";
 import { db } from "@db";
 import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq } from "drizzle-orm";
+import { setupAuth } from "./auth";
 
 export function registerRoutes(app: Express): Server {
+  // Auth sistemi kurulumu
+  setupAuth(app);
+
   // API güvenlik kontrolü
   const requireAuth = (req: any, res: any, next: any) => {
     if (!req.isAuthenticated()) {
@@ -58,6 +62,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/employees/:id", async (req, res) => {
+    try {
+      await db
+        .delete(employees)
+        .where(eq(employees.id, parseInt(req.params.id)))
+        .returning();
+      res.json({ message: "Personel silindi" });
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
+  });
+
   // Leaves
   app.get("/api/leaves", async (req, res) => {
     const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
@@ -95,7 +111,6 @@ export function registerRoutes(app: Express): Server {
       res.status(400).send(error.message);
     }
   });
-
 
   const httpServer = createServer(app);
   return httpServer;
