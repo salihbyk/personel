@@ -34,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
-import { format, addDays, startOfWeek } from "date-fns";
+import { format, addDays, startOfWeek, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { Employee, Leave } from "@db/schema";
 
@@ -122,9 +122,9 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const isLeaveDay = (date: Date) => {
     return leaves?.some(
       (leave) => {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
-        return date >= start && date <= end;
+        const startDate = new Date(leave.startDate);
+        const endDate = new Date(leave.endDate);
+        return isWithinInterval(date, { start: startDate, end: endDate });
       }
     );
   };
@@ -132,9 +132,9 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const getLeave = (date: Date) => {
     return leaves?.find(
       (leave) => {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
-        return date >= start && date <= end;
+        const startDate = new Date(leave.startDate);
+        const endDate = new Date(leave.endDate);
+        return isWithinInterval(date, { start: startDate, end: endDate });
       }
     );
   };
@@ -165,6 +165,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
               selected={currentDate}
               onSelect={(date) => date && setCurrentDate(date)}
               initialFocus
+              locale={tr}
             />
           </PopoverContent>
         </Popover>
