@@ -105,19 +105,16 @@ export function setupAuth(app: Express) {
   // Admin kullanıcısı oluşturma
   app.post("/api/init", async (req, res) => {
     try {
-      const [existingAdmin] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, "admin"))
-        .limit(1);
+      // Önce mevcut admin kullanıcısını temizle
+      await db.delete(users).where(eq(users.username, "admin"));
 
-      if (!existingAdmin) {
-        const hashedPassword = await crypto.hash("E112233T");
-        await db.insert(users).values({
-          username: "admin",
-          password: hashedPassword,
-        });
-      }
+      // Yeni admin kullanıcısı oluştur
+      const hashedPassword = await crypto.hash("E112233T");
+      await db.insert(users).values({
+        username: "admin",
+        password: hashedPassword,
+      });
+
       res.json({ message: "Admin kullanıcısı hazır" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
