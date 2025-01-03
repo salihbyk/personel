@@ -197,7 +197,13 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                         "w-full justify-start gap-2 text-gray-700 h-auto py-3",
                         "transition-all hover:bg-blue-50/50 active:scale-[0.98]",
                         "hover:scale-[1.02] hover:shadow-md",
-                        location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700"
+                        "relative mb-2 overflow-hidden",
+                        "border-b-2 border-gradient-to-r from-blue-100 to-purple-100",
+                        "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1",
+                        "after:bg-gradient-to-r after:from-blue-200 after:to-purple-200",
+                        "after:transform after:translate-y-full hover:after:translate-y-0",
+                        "after:transition-transform after:duration-300",
+                        location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700 border-blue-200"
                       )}
                     >
                       <UserRound className="h-4 w-4 flex-shrink-0" />
