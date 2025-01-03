@@ -3,27 +3,15 @@ import { createServer, type Server } from "http";
 import { db } from "@db";
 import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq } from "drizzle-orm";
-import { setupAuth } from "./auth";
 
 export function registerRoutes(app: Express): Server {
-  // Auth sistemi kurulumu
-  setupAuth(app);
-
-  // Auth middleware - tüm API rotalarını korur
-  const requireAuth = (req: any, res: any, next: any) => {
-    if (req.isAuthenticated()) {
-      return next();
-    }
-    res.status(401).send("Unauthorized");
-  };
-
   // Employees
-  app.get("/api/employees", requireAuth, async (_req, res) => {
+  app.get("/api/employees", async (_req, res) => {
     const allEmployees = await db.query.employees.findMany();
     res.json(allEmployees);
   });
 
-  app.get("/api/employees/:id", requireAuth, async (req, res) => {
+  app.get("/api/employees/:id", async (req, res) => {
     const employee = await db.query.employees.findFirst({
       where: eq(employees.id, parseInt(req.params.id)),
     });
@@ -35,7 +23,7 @@ export function registerRoutes(app: Express): Server {
     res.json(employee);
   });
 
-  app.post("/api/employees", requireAuth, async (req, res) => {
+  app.post("/api/employees", async (req, res) => {
     try {
       const employee = await db.insert(employees).values(req.body).returning();
       res.json(employee[0]);
@@ -44,7 +32,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/employees/:id", requireAuth, async (req, res) => {
+  app.put("/api/employees/:id", async (req, res) => {
     try {
       const employee = await db
         .update(employees)
@@ -57,13 +45,13 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete("/api/employees/:id", requireAuth, async (req, res) => {
+  app.delete("/api/employees/:id", async (req, res) => {
     await db.delete(employees).where(eq(employees.id, parseInt(req.params.id)));
     res.status(204).send();
   });
 
   // Inventory Items
-  app.get("/api/inventory", requireAuth, async (req, res) => {
+  app.get("/api/inventory", async (req, res) => {
     const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
 
     const items = await db.query.inventoryItems.findMany({
@@ -74,7 +62,7 @@ export function registerRoutes(app: Express): Server {
     res.json(items);
   });
 
-  app.post("/api/inventory", requireAuth, async (req, res) => {
+  app.post("/api/inventory", async (req, res) => {
     try {
       const item = await db.insert(inventoryItems).values(req.body).returning();
       res.json(item[0]);
@@ -83,7 +71,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/inventory/:id", requireAuth, async (req, res) => {
+  app.put("/api/inventory/:id", async (req, res) => {
     try {
       const item = await db
         .update(inventoryItems)
@@ -96,7 +84,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete("/api/inventory/:id", requireAuth, async (req, res) => {
+  app.delete("/api/inventory/:id", async (req, res) => {
     try {
       await db.delete(inventoryItems).where(eq(inventoryItems.id, parseInt(req.params.id)));
       res.status(204).send();
@@ -106,7 +94,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Leaves
-  app.get("/api/leaves", requireAuth, async (req, res) => {
+  app.get("/api/leaves", async (req, res) => {
     const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
 
     const allLeaves = await db.query.leaves.findMany({
@@ -117,7 +105,7 @@ export function registerRoutes(app: Express): Server {
     res.json(allLeaves);
   });
 
-  app.post("/api/leaves", requireAuth, async (req, res) => {
+  app.post("/api/leaves", async (req, res) => {
     try {
       const leave = await db.insert(leaves).values(req.body).returning();
       res.json(leave[0]);
@@ -126,7 +114,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.put("/api/leaves/:id", requireAuth, async (req, res) => {
+  app.put("/api/leaves/:id", async (req, res) => {
     const leave = await db
       .update(leaves)
       .set(req.body)
@@ -135,7 +123,7 @@ export function registerRoutes(app: Express): Server {
     res.json(leave[0]);
   });
 
-  app.delete("/api/leaves/:id", requireAuth, async (req, res) => {
+  app.delete("/api/leaves/:id", async (req, res) => {
     try {
       await db.delete(leaves).where(eq(leaves.id, parseInt(req.params.id)));
       res.status(204).send();

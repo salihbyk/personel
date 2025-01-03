@@ -23,7 +23,6 @@ export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(), // laptop, phone, key, card, etc.
-  serialNumber: text("serial_number"),
   condition: text("condition").notNull(), // new, good, fair, poor
   notes: text("notes"),
   assignedTo: serial("assigned_to").references(() => employees.id),

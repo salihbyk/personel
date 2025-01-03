@@ -4,9 +4,7 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
-        const res = await fetch(queryKey[0] as string, {
-          credentials: "include",
-        });
+        const res = await fetch(queryKey[0] as string);
 
         if (!res.ok) {
           if (res.status >= 500) {
@@ -18,13 +16,20 @@ export const queryClient = new QueryClient({
 
         return res.json();
       },
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      // Enable automatic background refresh
+      staleTime: 30000, // Consider data fresh for 30 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      retry: 1,
     },
     mutations: {
       retry: false,
+      // Automatically invalidate queries after mutations
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      },
     }
   },
 });

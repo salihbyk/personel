@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -81,7 +80,6 @@ export function InventorySection({ employee }: InventorySectionProps) {
     defaultValues: {
       name: "",
       type: "",
-      serialNumber: "",
       condition: "yeni",
       notes: "",
       assignedTo: employee.id,
@@ -147,6 +145,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
         description: "Zimmetli eşya güncellendi",
       });
       setSelectedItem(null);
+      setIsOpen(false);
       form.reset();
     },
     onError: (error) => {
@@ -248,7 +247,6 @@ export function InventorySection({ employee }: InventorySectionProps) {
                         form.reset({
                           name: item.name,
                           type: item.type,
-                          serialNumber: item.serialNumber || "",
                           condition: item.condition as "yeni" | "iyi" | "orta" | "kötü",
                           notes: item.notes || "",
                           assignedTo: item.assignedTo,
@@ -271,12 +269,6 @@ export function InventorySection({ employee }: InventorySectionProps) {
                     </Button>
                   </div>
                 </div>
-                {item.serialNumber && (
-                  <p className="text-sm">
-                    <span className="font-medium">Seri No:</span>{" "}
-                    {item.serialNumber}
-                  </p>
-                )}
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">
                     {format(new Date(item.assignedAt!), "d MMMM yyyy", {
@@ -362,20 +354,6 @@ export function InventorySection({ employee }: InventorySectionProps) {
 
               <FormField
                 control={form.control}
-                name="serialNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Seri Numarası</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="condition"
                 render={({ field }) => (
                   <FormItem>
@@ -406,7 +384,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
                   <FormItem>
                     <FormLabel>Notlar</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

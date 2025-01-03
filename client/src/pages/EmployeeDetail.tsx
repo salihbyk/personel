@@ -22,9 +22,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Calendar, Clock, Timer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import type { Employee, Leave } from "@db/schema";
@@ -49,6 +49,15 @@ export default function EmployeeDetail() {
     queryKey: [`/api/leaves?employeeId=${id}`],
     enabled: !!id,
   });
+
+  // Calculate leave statistics
+  const totalLeaveAllowance = employee?.totalLeaveAllowance || 0;
+  const usedLeaveDays = leaves?.reduce((total, leave) => {
+    const start = new Date(leave.startDate);
+    const end = new Date(leave.endDate);
+    return total + differenceInDays(end, start) + 1;
+  }, 0) || 0;
+  const remainingLeaveDays = Number(totalLeaveAllowance) - usedLeaveDays;
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -114,6 +123,54 @@ export default function EmployeeDetail() {
             </div>
           </CardHeader>
           <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card>
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-full">
+                    <Calendar className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">
+                      Toplam İzin Hakkı
+                    </div>
+                    <div className="text-2xl font-semibold">
+                      {totalLeaveAllowance} gün
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <div className="p-3 bg-yellow-100 rounded-full">
+                    <Clock className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">
+                      Kullanılan İzin
+                    </div>
+                    <div className="text-2xl font-semibold">
+                      {usedLeaveDays} gün
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <div className="p-3 bg-green-100 rounded-full">
+                    <Timer className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">
+                      Kalan İzin
+                    </div>
+                    <div className="text-2xl font-semibold">
+                      {remainingLeaveDays} gün
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="space-y-2">
               <div>
                 <span className="font-medium">E-posta:</span> {employee.email}
