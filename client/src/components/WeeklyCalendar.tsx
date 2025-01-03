@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 import type { Employee, Leave } from "@db/schema";
 
 interface WeeklyCalendarProps {
@@ -39,11 +40,11 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -80,7 +81,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
 
   return (
     <>
-      <div className="grid grid-cols-7 gap-4 p-4">
+      <div className="grid grid-cols-7 gap-4">
         {weekDays.map((day) => {
           const hasLeave = isLeaveDay(day);
           const leaveNote = getLeaveNote(day);
