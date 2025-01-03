@@ -28,6 +28,13 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
       {/* Global Search Bar */}
       <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-50 flex items-center px-4">
         <div className="max-w-3xl mx-auto w-full flex items-center gap-4">
+          <Link href="/" className="flex-shrink-0">
+            <img
+              src="https://www.europatrans.com.tr/sitelogo.png.webp"
+              alt="Logo"
+              className="h-8 w-auto"
+            />
+          </Link>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input

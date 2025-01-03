@@ -2,6 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +23,10 @@ export default function EmployeeForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const { data: employees } = useQuery<Employee[]>({
+    queryKey: ["/api/employees"],
+  });
+
   const { data: employee } = useQuery<Employee>({
     queryKey: [`/api/employees/${id}`],
     enabled: !!id,
@@ -37,6 +42,7 @@ export default function EmployeeForm() {
       address: "",
       position: "",
       department: "",
+      salary: "",
       joinDate: new Date().toISOString().split("T")[0],
     },
   });
@@ -51,23 +57,23 @@ export default function EmployeeForm() {
           body: JSON.stringify(data),
         }
       );
-      
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: `Employee ${id ? "updated" : "created"} successfully`,
+        title: "Başarılı",
+        description: `Personel ${id ? "güncellendi" : "eklendi"}`,
       });
       setLocation("/");
     },
     onError: (error) => {
       toast({
-        title: "Error",
+        title: "Hata",
         description: error.message,
         variant: "destructive",
       });
@@ -75,21 +81,135 @@ export default function EmployeeForm() {
   });
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>{id ? "Edit" : "New"} Employee</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <Layout employees={employees || []} isLoading={false}>
+      <div className="p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>{id ? "Personel Düzenle" : "Yeni Personel"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => mutation.mutate(data as any))} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ad</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Soyad</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>E-posta</FormLabel>
+                        <FormControl>
+                          <Input type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefon</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="position"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pozisyon</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="department"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Departman</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="salary"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Maaş (TL)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="joinDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>İşe Başlama Tarihi</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <FormField
                   control={form.control}
-                  name="firstName"
+                  name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First Name</FormLabel>
+                      <FormLabel>Adres</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -97,118 +217,20 @@ export default function EmployeeForm() {
                     </FormItem>
                   )}
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Position</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="department"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="joinDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Join Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end gap-4">
-                <Button variant="outline" onClick={() => setLocation("/")}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </div>
+                <div className="flex justify-end gap-4">
+                  <Button variant="outline" onClick={() => setLocation("/")}>
+                    İptal
+                  </Button>
+                  <Button type="submit" disabled={mutation.isPending}>
+                    {mutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
   );
 }

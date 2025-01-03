@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import Dashboard from "./pages/Dashboard";
 import EmployeeDetail from "./pages/EmployeeDetail";
+import EmployeeForm from "./pages/EmployeeForm";
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
       <div className="min-h-screen bg-background">
         <Switch>
           <Route path="/" component={Dashboard} />
+          <Route path="/employee/new" component={EmployeeForm} />
           <Route path="/employee/:id" component={EmployeeDetail} />
         </Switch>
         <Toaster />
