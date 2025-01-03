@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,20 +69,20 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const isLeaveDay = (date: Date) => {
     return leaves?.some(
       (leave) =>
-        new Date(leave.startDate) <= date && new Date(leave.endDate) >= date
+        new Date(leave.startDate).toDateString() === date.toDateString()
     );
   };
 
   const getLeaveNote = (date: Date) => {
     return leaves?.find(
       (leave) =>
-        new Date(leave.startDate) <= date && new Date(leave.endDate) >= date
+        new Date(leave.startDate).toDateString() === date.toDateString()
     )?.reason;
   };
 
   return (
     <>
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day) => {
           const hasLeave = isLeaveDay(day);
           const leaveNote = getLeaveNote(day);
@@ -90,8 +91,8 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
             <div
               key={day.toISOString()}
               className={cn(
-                "aspect-square p-2 rounded-lg border cursor-pointer hover:bg-accent transition-colors",
-                hasLeave && "bg-yellow-100 hover:bg-yellow-200"
+                "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md",
+                hasLeave ? "bg-yellow-100 border-yellow-300" : "hover:bg-accent/50"
               )}
               onClick={() => {
                 if (!hasLeave) {
@@ -103,13 +104,15 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                 }
               }}
             >
-              <div className="text-center">
-                <div className="font-medium">{format(day, "EEEE", { locale: tr })}</div>
-                <div className="text-sm text-muted-foreground">
-                  {format(day, "d MMM", { locale: tr })}
+              <div className="text-center space-y-1">
+                <div className="text-sm font-medium">
+                  {format(day, "EEE", { locale: tr })}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {format(day, "d", { locale: tr })}
                 </div>
                 {hasLeave && (
-                  <Badge variant="outline" className="mt-2">
+                  <Badge variant="outline" className="w-full text-[10px] py-0">
                     İzinli
                   </Badge>
                 )}
@@ -120,24 +123,30 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       </div>
 
       <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              İzin Ekle - {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: tr })}
+              İzin Ekle
             </DialogTitle>
+            <DialogDescription>
+              {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: tr })}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="grid gap-4 py-4">
             <Textarea
               placeholder="İzin notu ekleyin..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              className="min-h-[100px]"
             />
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedDate(null)}>
+              İptal
+            </Button>
             <Button
-              type="submit"
               onClick={() => {
-                if (selectedDate) {
+                if (selectedDate && note.trim()) {
                   mutation.mutate({
                     employeeId: employee.id,
                     startDate: selectedDate.toISOString(),
@@ -148,7 +157,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   });
                 }
               }}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || !note.trim()}
             >
               {mutation.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>

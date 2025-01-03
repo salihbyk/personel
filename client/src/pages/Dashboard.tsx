@@ -28,11 +28,11 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[calc(100vh-12rem)]">
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {employees?.map((employee) => (
-                  <Card key={employee.id}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
+                  <Card key={employee.id} className="border-none shadow-none">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-medium">
                         {employee.firstName} {employee.lastName}
                       </CardTitle>
                     </CardHeader>
