@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { employees, leaves, inventoryItems, users } from "@db/schema";
+import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { setupAuth } from "./auth";
 
@@ -24,20 +24,28 @@ export function registerRoutes(app: Express): Server {
 
   // Employees
   app.get("/api/employees", async (req, res) => {
-    const allEmployees = await db.query.employees.findMany();
-    res.json(allEmployees);
+    try {
+      const allEmployees = await db.query.employees.findMany();
+      res.json(allEmployees);
+    } catch (error: any) {
+      res.status(500).send("Personel listesi alınamadı: " + error.message);
+    }
   });
 
   app.get("/api/employees/:id", async (req, res) => {
-    const employee = await db.query.employees.findFirst({
-      where: eq(employees.id, parseInt(req.params.id)),
-    });
+    try {
+      const employee = await db.query.employees.findFirst({
+        where: eq(employees.id, parseInt(req.params.id)),
+      });
 
-    if (!employee) {
-      return res.status(404).send("Personel bulunamadı");
+      if (!employee) {
+        return res.status(404).send("Personel bulunamadı");
+      }
+
+      res.json(employee);
+    } catch (error: any) {
+      res.status(500).send("Personel bilgisi alınamadı: " + error.message);
     }
-
-    res.json(employee);
   });
 
   app.post("/api/employees", async (req, res) => {
@@ -45,7 +53,7 @@ export function registerRoutes(app: Express): Server {
       const employee = await db.insert(employees).values(req.body).returning();
       res.json(employee[0]);
     } catch (error: any) {
-      res.status(400).send(error.message);
+      res.status(400).send("Personel eklenemedi: " + error.message);
     }
   });
 
@@ -58,7 +66,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
       res.json(employee[0]);
     } catch (error: any) {
-      res.status(400).send(error.message);
+      res.status(400).send("Personel güncellenemedi: " + error.message);
     }
   });
 
@@ -70,18 +78,22 @@ export function registerRoutes(app: Express): Server {
         .returning();
       res.json({ message: "Personel silindi" });
     } catch (error: any) {
-      res.status(400).send(error.message);
+      res.status(400).send("Personel silinemedi: " + error.message);
     }
   });
 
-  // Leaves
+  // Leaves (İzinler)
   app.get("/api/leaves", async (req, res) => {
-    const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
-    const allLeaves = await db.query.leaves.findMany({
-      where: employeeId ? eq(leaves.employeeId, employeeId) : undefined,
-      orderBy: (leaves, { desc }) => [desc(leaves.startDate)],
-    });
-    res.json(allLeaves);
+    try {
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const allLeaves = await db.query.leaves.findMany({
+        where: employeeId ? eq(leaves.employeeId, employeeId) : undefined,
+        orderBy: (leaves, { desc }) => [desc(leaves.startDate)],
+      });
+      res.json(allLeaves);
+    } catch (error: any) {
+      res.status(500).send("İzin listesi alınamadı: " + error.message);
+    }
   });
 
   app.post("/api/leaves", async (req, res) => {
@@ -89,18 +101,22 @@ export function registerRoutes(app: Express): Server {
       const leave = await db.insert(leaves).values(req.body).returning();
       res.json(leave[0]);
     } catch (error: any) {
-      res.status(400).send(error.message);
+      res.status(400).send("İzin eklenemedi: " + error.message);
     }
   });
 
-  // Inventory Items
+  // Inventory Items (Envanter)
   app.get("/api/inventory", async (req, res) => {
-    const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
-    const items = await db.query.inventoryItems.findMany({
-      where: employeeId ? eq(inventoryItems.assignedTo, employeeId) : undefined,
-      orderBy: (items, { desc }) => [desc(items.createdAt)],
-    });
-    res.json(items);
+    try {
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const items = await db.query.inventoryItems.findMany({
+        where: employeeId ? eq(inventoryItems.assignedTo, employeeId) : undefined,
+        orderBy: (items, { desc }) => [desc(items.createdAt)],
+      });
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).send("Envanter listesi alınamadı: " + error.message);
+    }
   });
 
   app.post("/api/inventory", async (req, res) => {
@@ -108,7 +124,7 @@ export function registerRoutes(app: Express): Server {
       const item = await db.insert(inventoryItems).values(req.body).returning();
       res.json(item[0]);
     } catch (error: any) {
-      res.status(400).send(error.message);
+      res.status(400).send("Envanter öğesi eklenemedi: " + error.message);
     }
   });
 

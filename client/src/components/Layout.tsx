@@ -2,10 +2,21 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { UserRound, Search, Plus, Banknote, Menu, X } from "lucide-react";
+import { 
+  UserRound, 
+  Search, 
+  Plus, 
+  Banknote, 
+  Menu, 
+  X, 
+  LogOut,
+  ChevronLeft
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
+import { useMutation } from "@tanstack/react-query";
 import type { Employee } from "@db/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,6 +32,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
   const [debouncedSidebarTerm, setDebouncedSidebarTerm] = useState("");
   const [debouncedGlobalTerm, setDebouncedGlobalTerm] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { toast } = useToast();
 
   // Debounce sidebar search term
   useEffect(() => {
@@ -63,6 +75,36 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
     );
   };
 
+  // Çıkış yapma mutasyonu
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Başarılı",
+        description: "Çıkış yapıldı",
+      });
+      window.location.reload();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Click outside handler for global search
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -95,12 +137,13 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
       <aside 
         className={cn(
           "fixed inset-y-0 left-0 w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 pt-16",
-          "transition-transform duration-300 ease-out transform lg:translate-x-0 lg:static z-50",
+          "transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static z-50",
           "shadow-xl lg:shadow-none",
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "flex flex-col h-full" 
         )}
       >
-        <div className="p-4">
+        <div className="p-4 flex-shrink-0">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-blue-500" />
             <Input
@@ -111,7 +154,8 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             />
           </div>
         </div>
-        <ScrollArea className="h-[calc(100vh-8rem)]">
+
+        <ScrollArea className="flex-1">
           <div className="p-2">
             {isLoading ? (
               <div className="space-y-2 p-4">
@@ -136,8 +180,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                         "w-full justify-start gap-2 text-gray-700 h-auto py-3",
                         "transition-all hover:bg-blue-50/50 active:scale-[0.98]",
                         "hover:scale-[1.02] shadow-sm",
-                        location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700",
-                        debouncedSidebarTerm && "relative overflow-visible"
+                        location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700"
                       )}
                     >
                       <UserRound className="h-4 w-4 flex-shrink-0" />
@@ -165,6 +208,19 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             )}
           </div>
         </ScrollArea>
+
+        {/* Çıkış yap butonu */}
+        <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut className="h-4 w-4" />
+            {logoutMutation.isPending ? "Çıkış yapılıyor..." : "Çıkış Yap"}
+          </Button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -185,6 +241,19 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                   <Menu className="h-5 w-5" />
                 )}
               </Button>
+
+              {/* Back button on mobile */}
+              {location !== "/" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                  onClick={() => setLocation("/")}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+              )}
+
               <Link href="/" className="flex-shrink-0 transition-transform hover:scale-105">
                 <img
                   src="https://www.europatrans.com.tr/sitelogo.png.webp"
@@ -194,7 +263,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
               </Link>
             </div>
 
-            <div className="flex-1 max-w-xl relative group global-search">
+            <div className="flex-1 max-w-xl relative group global-search hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-blue-500" />
               <Input
                 placeholder="Tüm sistemde ara..."
@@ -256,9 +325,8 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                 className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white gap-2 transition-all hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap"
                 size="sm"
               >
-                <Plus className="h-4 w-4 hidden sm:block" />
-                <span className="hidden sm:block">Yeni Personel</span>
                 <Plus className="h-4 w-4 sm:hidden" />
+                <span className="hidden sm:inline">Yeni Personel</span>
               </Button>
             </Link>
           </div>
