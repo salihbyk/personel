@@ -76,6 +76,15 @@ export function registerRoutes(app: Express): Server {
     res.json(leave[0]);
   });
 
+  app.delete("/api/leaves/:id", async (req, res) => {
+    try {
+      await db.delete(leaves).where(eq(leaves.id, parseInt(req.params.id)));
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

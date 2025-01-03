@@ -9,9 +9,20 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -24,6 +35,7 @@ interface WeeklyCalendarProps {
 
 export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
   const [note, setNote] = useState("");
   const { toast } = useToast();
 
@@ -34,7 +46,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
     queryKey: [`/api/leaves?employeeId=${employee.id}`],
   });
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: async (data: { employeeId: number; startDate: string; endDate: string; reason: string; type: string; status: string }) => {
       const response = await fetch("/api/leaves", {
         method: "POST",
@@ -66,6 +78,33 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (leaveId: number) => {
+      const response = await fetch(`/api/leaves/${leaveId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/leaves?employeeId=${employee.id}`] });
+      toast({
+        title: "Başarılı",
+        description: "İzin silindi",
+      });
+      setSelectedLeave(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const isLeaveDay = (date: Date) => {
     return leaves?.some(
       (leave) =>
@@ -73,25 +112,25 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
     );
   };
 
-  const getLeaveNote = (date: Date) => {
+  const getLeave = (date: Date) => {
     return leaves?.find(
       (leave) =>
         new Date(leave.startDate).toDateString() === date.toDateString()
-    )?.reason;
+    );
   };
 
   return (
     <>
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day) => {
-          const hasLeave = isLeaveDay(day);
-          const leaveNote = getLeaveNote(day);
+          const leave = getLeave(day);
+          const hasLeave = !!leave;
 
           return (
             <div
               key={day.toISOString()}
               className={cn(
-                "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md",
+                "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative",
                 hasLeave ? "bg-yellow-100 border-yellow-300" : "hover:bg-accent/50"
               )}
               onClick={() => {
@@ -99,7 +138,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   setSelectedDate(day);
                 } else {
                   toast({
-                    description: `Not: ${leaveNote}`,
+                    description: `Not: ${leave?.reason}`,
                   });
                 }
               }}
@@ -112,9 +151,22 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   {format(day, "d", { locale: tr })}
                 </div>
                 {hasLeave && (
-                  <Badge variant="outline" className="w-full text-[10px] py-0">
-                    İzinli
-                  </Badge>
+                  <>
+                    <Badge variant="outline" className="w-full text-[10px] py-0">
+                      İzinli
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-1 right-1 h-4 w-4 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedLeave(leave);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -147,7 +199,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
             <Button
               onClick={() => {
                 if (selectedDate && note.trim()) {
-                  mutation.mutate({
+                  createMutation.mutate({
                     employeeId: employee.id,
                     startDate: selectedDate.toISOString(),
                     endDate: selectedDate.toISOString(),
@@ -157,13 +209,36 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                   });
                 }
               }}
-              disabled={mutation.isPending || !note.trim()}
+              disabled={createMutation.isPending || !note.trim()}
             >
-              {mutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+              {createMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!selectedLeave} onOpenChange={() => setSelectedLeave(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>İzni Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu izni silmek istediğinize emin misiniz?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedLeave) {
+                  deleteMutation.mutate(selectedLeave.id);
+                }
+              }}
+            >
+              Evet, Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
