@@ -24,9 +24,9 @@ export const queryClient = new QueryClient({
           throw error;
         }
       },
-      refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      staleTime: 1000 * 60, // 1 dakika
+      cacheTime: 1000 * 60 * 5, // 5 dakika
       retry: 1,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },

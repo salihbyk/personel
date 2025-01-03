@@ -71,7 +71,7 @@ app.use((req, res, next) => {
       await setupVite(app, server);
     } else {
       // Production modunda statik dosyaları serve et
-      const distPath = path.resolve("dist/public");
+      const distPath = path.resolve(__dirname, "public");
       app.use(express.static(distPath));
 
       // Client-side routing için tüm istekleri index.html'e yönlendir
@@ -82,7 +82,8 @@ app.use((req, res, next) => {
       });
     }
 
-    const PORT = process.env.PORT || 5000;
+    // ALWAYS serve the app on port 5000
+    const PORT = 5000;
     server.listen(PORT, "0.0.0.0", () => {
       log(`Sunucu ${PORT} portunda ${app.get("env")} modunda çalışıyor`);
     });

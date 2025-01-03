@@ -57,7 +57,6 @@ export function InventorySection({ employee }: InventorySectionProps) {
     defaultValues: {
       name: "",
       notes: "",
-      assignedTo: employee.id,
     },
   });
 
@@ -70,7 +69,11 @@ export function InventorySection({ employee }: InventorySectionProps) {
       const response = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          assignedTo: employee.id
+        }),
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -104,7 +107,11 @@ export function InventorySection({ employee }: InventorySectionProps) {
       const response = await fetch(`/api/inventory/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(rest),
+        body: JSON.stringify({
+          ...rest,
+          assignedTo: employee.id
+        }),
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -137,6 +144,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
     mutationFn: async (id: number) => {
       const response = await fetch(`/api/inventory/${id}`, {
         method: "DELETE",
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -182,7 +190,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
             form.reset();
             setIsOpen(true);
           }}
-          className="gap-2"
+          className="gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
         >
           <Plus className="w-4 h-4" />
           Yeni Ekle
@@ -208,13 +216,13 @@ export function InventorySection({ employee }: InventorySectionProps) {
             items?.map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-lg border-2 border-gray-300 space-y-2 relative group bg-gradient-to-br from-white via-gray-50 to-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                className="p-4 rounded-lg border-2 border-gray-200 space-y-2 relative group bg-gradient-to-br from-white via-gray-50 to-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-medium">{item.name}</h4>
+                    <h4 className="font-medium text-gray-900">{item.name}</h4>
                     {item.notes && (
-                      <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
+                      <p className="text-sm text-gray-600 mt-1">{item.notes}</p>
                     )}
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -226,12 +234,12 @@ export function InventorySection({ employee }: InventorySectionProps) {
                         form.reset({
                           name: item.name,
                           notes: item.notes || "",
-                          assignedTo: item.assignedTo,
                         });
                         setIsOpen(true);
                       }}
+                      className="hover:bg-blue-50"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-4 h-4 text-blue-600" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -240,12 +248,13 @@ export function InventorySection({ employee }: InventorySectionProps) {
                         setSelectedItem(item);
                         setShowDeleteDialog(true);
                       }}
+                      className="hover:bg-red-50"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 text-red-600" />
                     </Button>
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-500">
                   {format(new Date(item.assignedAt!), "d MMMM yyyy", {
                     locale: tr,
                   })}
@@ -279,7 +288,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
                   <FormItem>
                     <FormLabel>Eşya Adı</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} className="border-2 focus:border-blue-300" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -293,7 +302,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
                   <FormItem>
                     <FormLabel>Not</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} className="border-2 focus:border-blue-300" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -305,12 +314,14 @@ export function InventorySection({ employee }: InventorySectionProps) {
                   type="button"
                   variant="outline"
                   onClick={() => setIsOpen(false)}
+                  className="border-2"
                 >
                   İptal
                 </Button>
                 <Button
                   type="submit"
                   disabled={createMutation.isPending || updateMutation.isPending}
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
                     <div className="flex items-center gap-2">
@@ -341,7 +352,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogCancel className="border-2">İptal</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (selectedItem) {

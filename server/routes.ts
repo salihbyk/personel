@@ -118,21 +118,20 @@ export function registerRoutes(app: Express): Server {
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
       const items = await db.query.inventoryItems.findMany({
         where: employeeId ? eq(inventoryItems.assignedTo, employeeId) : undefined,
-        orderBy: (items, { desc }) => [desc(items.createdAt)],
       });
       res.json(items);
     } catch (error: any) {
       console.error("Inventory error:", error);
-      res.status(500).json([]);
+      res.status(500).json({ error: error.message });
     }
   });
 
   app.post("/api/inventory", async (req, res) => {
     try {
-      const { name, notes } = req.body;
+      const { name, notes, assignedTo } = req.body;
 
-      if (!name) {
-        return res.status(400).json(null);
+      if (!name || !assignedTo) {
+        return res.status(400).json({ error: "Name and assignedTo are required" });
       }
 
       const newItem = {
@@ -140,40 +139,41 @@ export function registerRoutes(app: Express): Server {
         notes: notes || null,
         type: "diğer",
         condition: "yeni",
-        assignedTo: req.body.assignedTo || null,
-        assignedAt: req.body.assignedTo ? new Date() : null,
+        assignedTo,
+        assignedAt: new Date(),
       };
 
       const item = await db.insert(inventoryItems).values(newItem).returning();
       res.json(item[0]);
     } catch (error: any) {
       console.error("Inventory create error:", error);
-      res.status(400).json(null);
+      res.status(500).json({ error: error.message });
     }
   });
 
   app.put("/api/inventory/:id", async (req, res) => {
     try {
       const { name, notes } = req.body;
+      const id = parseInt(req.params.id);
 
       if (!name) {
-        return res.status(400).json(null);
+        return res.status(400).json({ error: "Name is required" });
       }
 
       const item = await db
         .update(inventoryItems)
         .set({ name, notes: notes || null })
-        .where(eq(inventoryItems.id, parseInt(req.params.id)))
+        .where(eq(inventoryItems.id, id))
         .returning();
 
       if (item.length === 0) {
-        return res.status(404).json(null);
+        return res.status(404).json({ error: "Item not found" });
       }
 
       res.json(item[0]);
     } catch (error: any) {
       console.error("Inventory update error:", error);
-      res.status(500).json(null);
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -185,13 +185,13 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).json(null);
+        return res.status(404).json({ error: "Item not found" });
       }
 
       res.json({ success: true });
     } catch (error: any) {
       console.error("Inventory delete error:", error);
-      res.status(500).json(null);
+      res.status(500).json({ error: error.message });
     }
   });
 

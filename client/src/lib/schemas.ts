@@ -23,7 +23,6 @@ export const employeeSchema = z.object({
 export const inventoryItemSchema = z.object({
   name: z.string().min(1, "Eşya adı gereklidir"),
   notes: z.string().optional(),
-  assignedTo: z.number().optional(),
 });
 
 export const leaveSchema = z.object({
