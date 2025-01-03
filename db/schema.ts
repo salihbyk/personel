@@ -2,6 +2,13 @@ import { pgTable, text, serial, date, numeric, timestamp, jsonb } from "drizzle-
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").unique().notNull(),
+  password: text("password").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const employees = pgTable("employees", {
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
@@ -83,6 +90,9 @@ export const inventoryItemRelations = relations(inventoryItems, ({ one }) => ({
   }),
 }));
 
+// Schema ve tip tanımlamaları
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
 export const insertEmployeeSchema = createInsertSchema(employees);
 export const selectEmployeeSchema = createSelectSchema(employees);
 export const insertLeaveSchema = createInsertSchema(leaves);
@@ -92,6 +102,9 @@ export const selectPerformanceSchema = createSelectSchema(performances);
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems);
 export const selectInventoryItemSchema = createSelectSchema(inventoryItems);
 
+// Tip tanımlamaları
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
 export type Leave = typeof leaves.$inferSelect;
