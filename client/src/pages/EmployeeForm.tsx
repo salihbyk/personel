@@ -1,5 +1,5 @@
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Layout } from "@/components/Layout";
@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { employeeSchema } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import type { Employee } from "@db/schema";
+import { queryClient } from "@/lib/queryClient";
 
 export default function EmployeeForm() {
   const { id } = useParams();
@@ -65,6 +66,14 @@ export default function EmployeeForm() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate both the list and individual employee queries
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/employees/${id}`] });
+      }
+      // Also invalidate any related queries that might show employee data
+      queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
+
       toast({
         title: "Başarılı",
         description: `Personel ${id ? "güncellendi" : "eklendi"}`,
@@ -89,7 +98,10 @@ export default function EmployeeForm() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => mutation.mutate(data as any))} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit((data) => mutation.mutate(data as any))}
+                className="space-y-6"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -126,7 +138,7 @@ export default function EmployeeForm() {
                       <FormItem>
                         <FormLabel>E-posta</FormLabel>
                         <FormControl>
-                          <Input type="email" {...field} />
+                          <Input type="email" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -154,7 +166,7 @@ export default function EmployeeForm() {
                       <FormItem>
                         <FormLabel>Pozisyon</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -168,7 +180,7 @@ export default function EmployeeForm() {
                       <FormItem>
                         <FormLabel>Departman</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -196,7 +208,7 @@ export default function EmployeeForm() {
                       <FormItem>
                         <FormLabel>İşe Başlama Tarihi</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -211,7 +223,7 @@ export default function EmployeeForm() {
                     <FormItem>
                       <FormLabel>Adres</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
