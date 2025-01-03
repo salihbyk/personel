@@ -138,7 +138,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
           "flex flex-col h-full"
         )}
       >
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 border-b border-gray-200">
           <Link href="/" className="flex items-center justify-center">
             <img
               src="https://www.europatrans.com.tr/sitelogo.png.webp"
@@ -197,17 +197,18 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                         "w-full justify-start gap-2 text-gray-700 h-auto py-3",
                         "transition-all hover:bg-blue-50/50 active:scale-[0.98]",
                         "hover:scale-[1.02] hover:shadow-md",
-                        "relative mb-2 overflow-hidden",
-                        "border-b-2 border-gradient-to-r from-blue-100 to-purple-100",
+                        "relative mb-2 overflow-hidden border border-gray-200",
+                        "bg-gradient-to-br from-white via-gray-50 to-white",
+                        "before:absolute before:inset-0 before:z-0",
+                        "before:bg-gradient-to-r before:from-blue-100/20 before:via-purple-100/20 before:to-blue-100/20",
+                        "before:opacity-0 hover:before:opacity-100 before:transition-opacity",
                         "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1",
-                        "after:bg-gradient-to-r after:from-blue-200 after:to-purple-200",
-                        "after:transform after:translate-y-full hover:after:translate-y-0",
-                        "after:transition-transform after:duration-300",
-                        location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700 border-blue-200"
+                        "after:bg-gradient-to-r after:from-blue-300 after:to-purple-300",
+                        location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700 border-blue-300"
                       )}
                     >
-                      <UserRound className="h-4 w-4 flex-shrink-0" />
-                      <div className="flex-1 text-left">
+                      <UserRound className="h-4 w-4 flex-shrink-0 relative z-10" />
+                      <div className="flex-1 text-left relative z-10">
                         <div className="font-medium">
                           {highlightMatch(`${employee.firstName} ${employee.lastName}`, debouncedSidebarTerm)}
                         </div>
@@ -215,7 +216,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                           {highlightMatch(employee.position || '', debouncedSidebarTerm)}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end text-xs">
+                      <div className="flex flex-col items-end text-xs relative z-10">
                         <Banknote className="h-4 w-4 text-blue-500/70" />
                         <span className="text-gray-500">
                           {new Intl.NumberFormat('tr-TR', {

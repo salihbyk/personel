@@ -53,9 +53,10 @@ export default function Dashboard() {
       <div className="p-6">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border-blue-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-full">
+          <Card className="relative overflow-hidden border-2 border-blue-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-100/50 via-white to-blue-50" />
+            <CardContent className="p-6 flex items-center gap-4 relative">
+              <div className="p-3 bg-blue-100 rounded-full shadow-md">
                 <Users className="h-6 w-6 text-blue-600" />
               </div>
               <div>
@@ -63,11 +64,13 @@ export default function Dashboard() {
                 <div className="text-2xl font-semibold">{employees?.length || 0}</div>
               </div>
             </CardContent>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-300 to-purple-300" />
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 via-white to-green-50 border-green-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-full">
+          <Card className="relative overflow-hidden border-2 border-green-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100/50 via-white to-green-50" />
+            <CardContent className="p-6 flex items-center gap-4 relative">
+              <div className="p-3 bg-green-100 rounded-full shadow-md">
                 <CalendarDays className="h-6 w-6 text-green-600" />
               </div>
               <div>
@@ -75,11 +78,13 @@ export default function Dashboard() {
                 <div className="text-2xl font-semibold">{todayLeaveCount}</div>
               </div>
             </CardContent>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-300 to-teal-300" />
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border-purple-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-full">
+          <Card className="relative overflow-hidden border-2 border-purple-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-100/50 via-white to-purple-50" />
+            <CardContent className="p-6 flex items-center gap-4 relative">
+              <div className="p-3 bg-purple-100 rounded-full shadow-md">
                 <CalendarClock className="h-6 w-6 text-purple-600" />
               </div>
               <div>
@@ -92,6 +97,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </CardContent>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-300 to-pink-300" />
           </Card>
         </div>
 
