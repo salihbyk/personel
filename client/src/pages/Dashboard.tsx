@@ -53,7 +53,7 @@ export default function Dashboard() {
       <div className="p-6">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-white">
+          <Card className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border-blue-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-blue-100 rounded-full">
                 <Users className="h-6 w-6 text-blue-600" />
@@ -65,7 +65,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-white">
+          <Card className="bg-gradient-to-br from-green-50 via-white to-green-50 border-green-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-green-100 rounded-full">
                 <CalendarDays className="h-6 w-6 text-green-600" />
@@ -77,7 +77,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-white">
+          <Card className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border-purple-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-purple-100 rounded-full">
                 <CalendarClock className="h-6 w-6 text-purple-600" />
@@ -96,7 +96,7 @@ export default function Dashboard() {
         </div>
 
         {/* Bugün İzinli Personel */}
-        <Card className="mb-6 bg-gradient-to-br from-amber-50 to-white">
+        <Card className="mb-6 bg-gradient-to-br from-amber-50 via-white to-amber-50 border-amber-100 transition-all duration-300 hover:shadow-lg">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-amber-600" />
@@ -117,7 +117,7 @@ export default function Dashboard() {
                     parseISO(leave.startDate)
                   ) + 1;
                   return (
-                    <div key={leave.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                    <div key={leave.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
                       <div>
                         <div className="font-medium">
                           {employee?.firstName} {employee?.lastName}

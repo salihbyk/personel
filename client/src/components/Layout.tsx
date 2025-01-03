@@ -2,13 +2,13 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { 
-  UserRound, 
-  Search, 
-  Plus, 
-  Banknote, 
-  Menu, 
-  X, 
+import {
+  UserRound,
+  Search,
+  Plus,
+  Banknote,
+  Menu,
+  X,
   LogOut,
   ChevronLeft,
   Check
@@ -122,16 +122,16 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={cn(
-          "fixed inset-y-0 left-0 w-72 bg-gradient-to-b from-blue-600 to-blue-800 pt-4",
+          "fixed inset-y-0 left-0 w-72 bg-white border-r border-gray-200 pt-4",
           "transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static z-50",
           "shadow-xl lg:shadow-none",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full",
@@ -144,19 +144,19 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             <img
               src="https://www.europatrans.com.tr/sitelogo.png.webp"
               alt="Logo"
-              className="h-12 w-auto filter brightness-0 invert transition-all hover:scale-105"
+              className="h-12 w-auto transition-all hover:scale-105"
             />
           </Link>
         </div>
 
         <div className="p-4 flex-shrink-0">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60 transition-colors group-focus-within:text-white" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-blue-500" />
             <Input
               placeholder="Personel ara..."
               value={sidebarSearchTerm}
               onChange={(e) => setSidebarSearchTerm(e.target.value)}
-              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60 transition-all focus:ring-2 focus:ring-white/20 hover:bg-white/20"
+              className="pl-10 bg-white border-gray-200 transition-all focus:ring-2 focus:ring-blue-500/20 shadow-sm hover:border-gray-300"
             />
           </div>
         </div>
@@ -168,12 +168,12 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                 {[...Array(5)].map((_, i) => (
                   <div
                     key={i}
-                    className="h-16 bg-white/10 rounded-lg animate-pulse"
+                    className="h-16 bg-gray-100 rounded-lg animate-pulse"
                   />
                 ))}
               </div>
             ) : filteredSidebarEmployees.length === 0 ? (
-              <div className="text-center p-4 text-white/60">
+              <div className="text-center p-4 text-gray-500">
                 Sonuç bulunamadı
               </div>
             ) : (
@@ -183,10 +183,10 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                     <Button
                       variant={location === `/employee/${employee.id}` ? "secondary" : "ghost"}
                       className={cn(
-                        "w-full justify-start gap-2 text-white h-auto py-3",
-                        "transition-all hover:bg-white/10 active:scale-[0.98]",
-                        "hover:scale-[1.02] shadow-sm",
-                        location === `/employee/${employee.id}` && "bg-white/20"
+                        "w-full justify-start gap-2 text-gray-700 h-auto py-3",
+                        "transition-all hover:bg-blue-50/50 active:scale-[0.98]",
+                        "hover:scale-[1.02] hover:shadow-md",
+                        location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700"
                       )}
                     >
                       <UserRound className="h-4 w-4 flex-shrink-0" />
@@ -194,13 +194,13 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                         <div className="font-medium">
                           {highlightMatch(`${employee.firstName} ${employee.lastName}`, debouncedSidebarTerm)}
                         </div>
-                        <div className="text-xs text-white/60">
+                        <div className="text-xs text-gray-500">
                           {highlightMatch(employee.position || '', debouncedSidebarTerm)}
                         </div>
                       </div>
                       <div className="flex flex-col items-end text-xs">
-                        <Banknote className="h-4 w-4 text-white/70" />
-                        <span className="text-white/60">
+                        <Banknote className="h-4 w-4 text-blue-500/70" />
+                        <span className="text-gray-500">
                           {new Intl.NumberFormat('tr-TR', {
                             style: 'currency',
                             currency: 'TRY'
@@ -216,10 +216,10 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
         </ScrollArea>
 
         {/* Çıkış yap butonu */}
-        <div className="p-4 border-t border-white/20 flex-shrink-0">
+        <div className="p-4 border-t border-gray-200 flex-shrink-0">
           <Button
             variant="ghost"
-            className="w-full justify-start gap-2 text-white hover:text-white hover:bg-white/10"
+            className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50/80 transition-all duration-300"
             onClick={() => logoutMutation.mutate()}
             disabled={logoutMutation.isPending}
           >
@@ -318,7 +318,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             </div>
 
             <Link href="/employee/new">
-              <Button 
+              <Button
                 className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white gap-2 transition-all hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap"
                 size="sm"
               >
