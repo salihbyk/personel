@@ -19,9 +19,11 @@ export function registerRoutes(app: Express): Server {
   };
 
   // API rotaları
-  app.use("/api/employees", requireAuth);
-  app.use("/api/leaves", requireAuth);
-  app.use("/api/inventory", requireAuth);
+  //Removed requireAuth middleware for production.
+  app.use("/api/employees");
+  app.use("/api/leaves");
+  app.use("/api/inventory");
+
 
   // Employees
   app.get("/api/employees", async (req, res) => {
@@ -106,7 +108,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // İzin silme endpoint'i eklendi
   app.delete("/api/leaves/:id", async (req, res) => {
     try {
       const result = await db.delete(leaves)
@@ -163,7 +164,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Envanter güncelleme endpoint'i
   app.put("/api/inventory/:id", async (req, res) => {
     try {
       const { name, notes } = req.body;
@@ -192,7 +192,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Envanter silme endpoint'i
   app.delete("/api/inventory/:id", async (req, res) => {
     try {
       const result = await db

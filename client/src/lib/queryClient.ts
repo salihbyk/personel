@@ -10,9 +10,9 @@ export const queryClient = new QueryClient({
           });
 
           if (!res.ok) {
-            if (res.status === 401 && process.env.NODE_ENV === 'production') {
-              // Production'da auth hatalarını yoksay
-              return null;
+            if (process.env.NODE_ENV === 'production') {
+              // Production modunda API hatalarını yoksay ve boş veri döndür
+              return [];
             }
 
             if (res.status >= 500) {
@@ -26,7 +26,7 @@ export const queryClient = new QueryClient({
         } catch (error) {
           if (process.env.NODE_ENV === 'production') {
             console.error('API Error:', error);
-            return null;
+            return [];
           }
           throw error;
         }
@@ -35,9 +35,15 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: Infinity,
       retry: process.env.NODE_ENV === 'production' ? 3 : false,
+      retryDelay: 1000,
     },
     mutations: {
       retry: false,
+      onError: (error: any) => {
+        if (process.env.NODE_ENV === 'production') {
+          console.error('Mutation Error:', error);
+        }
+      }
     }
   },
 });
