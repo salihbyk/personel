@@ -11,17 +11,10 @@ export const employees = pgTable("employees", {
   address: text("address").notNull(),
   position: text("position").notNull(),
   department: text("department").notNull(),
+  salary: numeric("salary").notNull(),
   joinDate: date("join_date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const salaries = pgTable("salaries", {
-  id: serial("id").primaryKey(),
-  employeeId: serial("employee_id").references(() => employees.id).notNull(),
-  amount: numeric("amount").notNull(),
-  effectiveDate: date("effective_date").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const leaves = pgTable("leaves", {
@@ -36,15 +29,7 @@ export const leaves = pgTable("leaves", {
 });
 
 export const employeeRelations = relations(employees, ({ many }) => ({
-  salaries: many(salaries),
   leaves: many(leaves),
-}));
-
-export const salaryRelations = relations(salaries, ({ one }) => ({
-  employee: one(employees, {
-    fields: [salaries.employeeId],
-    references: [employees.id],
-  }),
 }));
 
 export const leaveRelations = relations(leaves, ({ one }) => ({
@@ -56,14 +41,10 @@ export const leaveRelations = relations(leaves, ({ one }) => ({
 
 export const insertEmployeeSchema = createInsertSchema(employees);
 export const selectEmployeeSchema = createSelectSchema(employees);
-export const insertSalarySchema = createInsertSchema(salaries);
-export const selectSalarySchema = createSelectSchema(salaries);
 export const insertLeaveSchema = createInsertSchema(leaves);
 export const selectLeaveSchema = createSelectSchema(leaves);
 
 export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
-export type Salary = typeof salaries.$inferSelect;
-export type NewSalary = typeof salaries.$inferInsert;
 export type Leave = typeof leaves.$inferSelect;
 export type NewLeave = typeof leaves.$inferInsert;
