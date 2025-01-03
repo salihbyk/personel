@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { UserRound, Search, Home, Banknote } from "lucide-react";
+import { UserRound, Search, Plus, Banknote } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import type { Employee } from "@db/schema";
@@ -25,27 +25,35 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
-        <div className="p-4 border-b bg-blue-600">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setLocation("/")}
-              className="text-white hover:bg-blue-500"
-            >
-              <Home className="h-5 w-5" />
-            </Button>
-            <h2 className="font-semibold text-lg text-white">Personel Sistemi</h2>
-          </div>
-          <div className="mt-4 relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-white/70" />
+      {/* Global Search Bar */}
+      <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-50 flex items-center px-4">
+        <div className="max-w-3xl mx-auto w-full flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Personel Ara..."
+              placeholder="Tüm sistemde ara..."
+              className="pl-10 bg-gray-50 border-gray-200"
+            />
+          </div>
+          <Link href="/employee/new">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+              <Plus className="h-4 w-4" />
+              Yeni Personel
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <div className="w-72 bg-white border-r border-gray-200 pt-16">
+        <div className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Personel ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 bg-blue-500/50 border-blue-400 placeholder-white/70 text-white"
+              className="pl-10 bg-gray-50 border-gray-200"
             />
           </div>
         </div>
@@ -61,13 +69,26 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                   <Link key={employee.id} href={`/employee/${employee.id}`}>
                     <Button
                       variant={location === `/employee/${employee.id}` ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2 text-gray-700"
+                      className="w-full justify-start gap-2 text-gray-700 h-auto py-3"
                     >
-                      <UserRound className="h-4 w-4" />
-                      <span className="truncate">
-                        {employee.firstName} {employee.lastName}
-                      </span>
-                      <Banknote className="h-4 w-4 ml-auto opacity-50" />
+                      <UserRound className="h-4 w-4 flex-shrink-0" />
+                      <div className="flex-1 text-left">
+                        <div className="font-medium">
+                          {employee.firstName} {employee.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {employee.position}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end text-xs">
+                        <Banknote className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-500">
+                          {new Intl.NumberFormat('tr-TR', { 
+                            style: 'currency', 
+                            currency: 'TRY' 
+                          }).format(Number(employee.salary))}
+                        </span>
+                      </div>
                     </Button>
                   </Link>
                 ))}
@@ -78,7 +99,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-gray-50">
+      <main className="flex-1 overflow-auto bg-gray-50 pt-16">
         {children}
       </main>
     </div>
