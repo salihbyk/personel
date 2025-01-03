@@ -39,6 +39,7 @@ function App() {
           <Route path="/" component={Dashboard} />
           <Route path="/employee/new" component={EmployeeForm} />
           <Route path="/employee/:id" component={EmployeeDetail} />
+          <Route path="/employee/:id/edit" component={EmployeeForm} />
         </Switch>
         <Toaster />
       </div>
