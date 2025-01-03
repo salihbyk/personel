@@ -29,8 +29,8 @@ export const employees = pgTable("employees", {
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // laptop, phone, key, card, etc.
-  condition: text("condition").notNull(), // new, good, fair, poor
+  type: text("type").notNull(),
+  condition: text("condition").notNull(),
   notes: text("notes"),
   assignedTo: serial("assigned_to").references(() => employees.id),
   assignedAt: timestamp("assigned_at"),
@@ -63,6 +63,7 @@ export const performances = pgTable("performances", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// İlişkiler
 export const employeeRelations = relations(employees, ({ many }) => ({
   leaves: many(leaves),
   performances: many(performances),

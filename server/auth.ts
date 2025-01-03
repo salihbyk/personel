@@ -3,28 +3,6 @@ import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { db } from "@db";
-
-const scryptAsync = promisify(scrypt);
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  },
-  compare: async (suppliedPassword: string, storedPassword: string) => {
-    const [hashedPassword, salt] = storedPassword.split(".");
-    const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-    const suppliedPasswordBuf = (await scryptAsync(
-      suppliedPassword,
-      salt,
-      64
-    )) as Buffer;
-    return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
-  },
-};
 
 declare global {
   namespace Express {
@@ -61,7 +39,7 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        // Sabit şifre kontrolü
+        // Sabit admin girişi kontrolü
         if (username === "admin" && password === "E112233T") {
           return done(null, { id: 1, username: "admin" });
         }
@@ -81,7 +59,7 @@ export function setupAuth(app: Express) {
       if (id === 1) {
         done(null, { id: 1, username: "admin" });
       } else {
-        done(new Error("User not found"));
+        done(new Error("Kullanıcı bulunamadı"));
       }
     } catch (err) {
       done(err);

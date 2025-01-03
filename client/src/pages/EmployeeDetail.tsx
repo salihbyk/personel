@@ -50,7 +50,7 @@ export default function EmployeeDetail() {
     enabled: !!id,
   });
 
-  // Calculate leave statistics
+  // Hesaplamaları güncelle
   const totalLeaveAllowance = employee?.totalLeaveAllowance || 0;
   const usedLeaveDays = leaves?.reduce((total, leave) => {
     const start = new Date(leave.startDate);
@@ -58,6 +58,7 @@ export default function EmployeeDetail() {
     return total + differenceInDays(end, start) + 1;
   }, 0) || 0;
   const remainingLeaveDays = Number(totalLeaveAllowance) - usedLeaveDays;
+  const leavePercentage = Math.round((usedLeaveDays / Number(totalLeaveAllowance)) * 100);
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -149,7 +150,7 @@ export default function EmployeeDetail() {
                       Kullanılan İzin
                     </div>
                     <div className="text-2xl font-semibold">
-                      {usedLeaveDays} gün
+                      {usedLeaveDays} gün <span className="text-sm text-gray-500">({leavePercentage}%)</span>
                     </div>
                   </div>
                 </CardContent>
