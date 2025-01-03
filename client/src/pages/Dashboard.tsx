@@ -6,7 +6,7 @@ import { WeeklyCalendar } from "@/components/WeeklyCalendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Users, CalendarDays, CalendarClock } from "lucide-react";
-import { isWithinInterval, parseISO, startOfDay, endOfDay, format } from "date-fns";
+import { isWithinInterval, parseISO, startOfDay, endOfDay, format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { Employee, Leave } from "@db/schema";
 
@@ -112,6 +112,10 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {todayLeaves.map((leave) => {
                   const employee = employees?.find(e => e.id === leave.employeeId);
+                  const leaveDuration = differenceInDays(
+                    parseISO(leave.endDate),
+                    parseISO(leave.startDate)
+                  ) + 1;
                   return (
                     <div key={leave.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
                       <div>
@@ -122,9 +126,14 @@ export default function Dashboard() {
                           {employee?.department}
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {format(parseISO(leave.startDate), "d MMM", { locale: tr })} -{" "}
-                        {format(parseISO(leave.endDate), "d MMM", { locale: tr })}
+                      <div className="text-right">
+                        <div className="text-sm text-gray-500">
+                          {format(parseISO(leave.startDate), "d MMM", { locale: tr })} -{" "}
+                          {format(parseISO(leave.endDate), "d MMM", { locale: tr })}
+                        </div>
+                        <div className="text-xs text-blue-600 font-medium">
+                          {leaveDuration} gün
+                        </div>
                       </div>
                     </div>
                   );

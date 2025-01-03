@@ -86,7 +86,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -94,7 +94,9 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 pt-16 transition-transform duration-300 ease-in-out transform lg:translate-x-0 lg:static z-50",
+          "fixed inset-y-0 left-0 w-72 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 pt-16",
+          "transition-transform duration-300 ease-out transform lg:translate-x-0 lg:static z-50",
+          "shadow-xl lg:shadow-none",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -131,8 +133,9 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                     <Button
                       variant={location === `/employee/${employee.id}` ? "secondary" : "ghost"}
                       className={cn(
-                        "w-full justify-start gap-2 text-gray-700 h-auto py-3 transition-all hover:bg-blue-50/50",
-                        "hover:scale-[1.02] active:scale-[0.98] shadow-sm",
+                        "w-full justify-start gap-2 text-gray-700 h-auto py-3",
+                        "transition-all hover:bg-blue-50/50 active:scale-[0.98]",
+                        "hover:scale-[1.02] shadow-sm",
                         location === `/employee/${employee.id}` && "bg-blue-50 text-blue-700",
                         debouncedSidebarTerm && "relative overflow-visible"
                       )}
@@ -204,7 +207,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
                 className="pl-10 bg-white border-gray-200 transition-all focus:ring-2 focus:ring-blue-500/20 shadow-sm hover:border-gray-300"
               />
               {showGlobalResults && globalSearchTerm && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-auto backdrop-blur-sm bg-white/80">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white/80 rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-auto backdrop-blur-sm">
                   {filteredGlobalEmployees.length === 0 ? (
                     <div className="p-4 text-center text-gray-500">
                       Sonuç bulunamadı
