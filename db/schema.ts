@@ -13,6 +13,22 @@ export const employees = pgTable("employees", {
   department: text("department"),
   salary: numeric("salary").notNull(),
   joinDate: date("join_date"),
+  emergencyContacts: jsonb("emergency_contacts").$type<EmergencyContact[]>().default([]),
+  totalLeaveAllowance: numeric("total_leave_allowance").default("30"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const inventoryItems = pgTable("inventory_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // laptop, phone, key, card, etc.
+  serialNumber: text("serial_number"),
+  condition: text("condition").notNull(), // new, good, fair, poor
+  notes: text("notes"),
+  assignedTo: serial("assigned_to").references(() => employees.id),
+  assignedAt: timestamp("assigned_at"),
+  returnedAt: timestamp("returned_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -22,8 +38,8 @@ export const leaves = pgTable("leaves", {
   employeeId: serial("employee_id").references(() => employees.id).notNull(),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
-  type: text("type").notNull(), // vacation, sick, personal
-  status: text("status").notNull(), // pending, approved, rejected
+  type: text("type").notNull(),
+  status: text("status").notNull(),
   reason: text("reason").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -32,11 +48,11 @@ export const performances = pgTable("performances", {
   id: serial("id").primaryKey(),
   employeeId: serial("employee_id").references(() => employees.id).notNull(),
   date: date("date").notNull(),
-  type: text("type").notNull(), // review, achievement, warning, goal
+  type: text("type").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  rating: numeric("rating"), // 1-5 rating for reviews
-  metrics: jsonb("metrics"), // Flexible metrics storage
+  rating: numeric("rating"),
+  metrics: jsonb("metrics"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -44,6 +60,7 @@ export const performances = pgTable("performances", {
 export const employeeRelations = relations(employees, ({ many }) => ({
   leaves: many(leaves),
   performances: many(performances),
+  inventoryItems: many(inventoryItems),
 }));
 
 export const leaveRelations = relations(leaves, ({ one }) => ({
@@ -60,12 +77,21 @@ export const performanceRelations = relations(performances, ({ one }) => ({
   }),
 }));
 
+export const inventoryItemRelations = relations(inventoryItems, ({ one }) => ({
+  employee: one(employees, {
+    fields: [inventoryItems.assignedTo],
+    references: [employees.id],
+  }),
+}));
+
 export const insertEmployeeSchema = createInsertSchema(employees);
 export const selectEmployeeSchema = createSelectSchema(employees);
 export const insertLeaveSchema = createInsertSchema(leaves);
 export const selectLeaveSchema = createSelectSchema(leaves);
 export const insertPerformanceSchema = createInsertSchema(performances);
 export const selectPerformanceSchema = createSelectSchema(performances);
+export const insertInventoryItemSchema = createInsertSchema(inventoryItems);
+export const selectInventoryItemSchema = createSelectSchema(inventoryItems);
 
 export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
@@ -73,3 +99,11 @@ export type Leave = typeof leaves.$inferSelect;
 export type NewLeave = typeof leaves.$inferInsert;
 export type Performance = typeof performances.$inferSelect;
 export type NewPerformance = typeof performances.$inferInsert;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+export type NewInventoryItem = typeof inventoryItems.$inferInsert;
+
+export type EmergencyContact = {
+  relationship: string;
+  name: string;
+  phone: string;
+};

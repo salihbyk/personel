@@ -2,6 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { WeeklyCalendar } from "@/components/WeeklyCalendar";
+import { InventorySection } from "@/components/InventorySection";
 import {
   Card,
   CardContent,
@@ -159,6 +160,12 @@ export default function EmployeeDetail() {
                 ))}
               </div>
             </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <InventorySection employee={employee} />
           </CardContent>
         </Card>
       </div>

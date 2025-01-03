@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { employees, leaves } from "@db/schema";
+import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { setupAuth } from "./auth";
 
@@ -60,6 +60,49 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/employees/:id", requireAuth, async (req, res) => {
     await db.delete(employees).where(eq(employees.id, parseInt(req.params.id)));
     res.status(204).send();
+  });
+
+  // Inventory Items
+  app.get("/api/inventory", requireAuth, async (req, res) => {
+    const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+
+    const items = await db.query.inventoryItems.findMany({
+      where: employeeId ? eq(inventoryItems.assignedTo, employeeId) : undefined,
+      orderBy: (items, { desc }) => [desc(items.createdAt)],
+    });
+
+    res.json(items);
+  });
+
+  app.post("/api/inventory", requireAuth, async (req, res) => {
+    try {
+      const item = await db.insert(inventoryItems).values(req.body).returning();
+      res.json(item[0]);
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
+  });
+
+  app.put("/api/inventory/:id", requireAuth, async (req, res) => {
+    try {
+      const item = await db
+        .update(inventoryItems)
+        .set(req.body)
+        .where(eq(inventoryItems.id, parseInt(req.params.id)))
+        .returning();
+      res.json(item[0]);
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
+  });
+
+  app.delete("/api/inventory/:id", requireAuth, async (req, res) => {
+    try {
+      await db.delete(inventoryItems).where(eq(inventoryItems.id, parseInt(req.params.id)));
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
   });
 
   // Leaves

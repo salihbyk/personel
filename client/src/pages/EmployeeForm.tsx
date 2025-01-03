@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,31 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { employeeSchema } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
-import type { Employee } from "@db/schema";
+import type { Employee, EmergencyContact } from "@db/schema";
 import { queryClient } from "@/lib/queryClient";
+import { Plus, Trash2 } from "lucide-react";
+import type { z } from "zod";
+
+const relationshipTypes = [
+  { value: "ebeveyn", label: "Ebeveyn" },
+  { value: "es", label: "Eş" },
+  { value: "cocuk", label: "Çocuk" },
+  { value: "kardes", label: "Kardeş" },
+  { value: "akraba", label: "Akraba" },
+  { value: "arkadas", label: "Arkadaş" },
+] as const;
+
+type FormData = z.infer<typeof employeeSchema>;
 
 export default function EmployeeForm() {
   const { id } = useParams();
@@ -33,23 +53,30 @@ export default function EmployeeForm() {
     enabled: !!id,
   });
 
-  const form = useForm({
+  const form = useForm<FormData>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: employee || {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      address: "",
-      position: "",
-      department: "",
-      salary: "",
-      joinDate: new Date().toISOString().split("T")[0],
+    defaultValues: {
+      firstName: employee?.firstName ?? "",
+      lastName: employee?.lastName ?? "",
+      email: employee?.email ?? "",
+      phone: employee?.phone ?? "",
+      address: employee?.address ?? "",
+      position: employee?.position ?? "",
+      department: employee?.department ?? "",
+      salary: employee?.salary?.toString() ?? "",
+      joinDate: employee?.joinDate ?? new Date().toISOString().split("T")[0],
+      emergencyContacts: (employee?.emergencyContacts as EmergencyContact[]) ?? [],
+      totalLeaveAllowance: employee?.totalLeaveAllowance?.toString() ?? "30",
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "emergencyContacts",
+  });
+
   const mutation = useMutation({
-    mutationFn: async (data: Employee) => {
+    mutationFn: async (data: FormData) => {
       const response = await fetch(
         id ? `/api/employees/${id}` : "/api/employees",
         {
@@ -66,12 +93,10 @@ export default function EmployeeForm() {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate both the list and individual employee queries
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       if (id) {
         queryClient.invalidateQueries({ queryKey: [`/api/employees/${id}`] });
       }
-      // Also invalidate any related queries that might show employee data
       queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
 
       toast({
@@ -99,7 +124,7 @@ export default function EmployeeForm() {
           <CardContent>
             <Form {...form}>
               <form
-                onSubmit={form.handleSubmit((data) => mutation.mutate(data as any))}
+                onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
                 className="space-y-6"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -138,7 +163,7 @@ export default function EmployeeForm() {
                       <FormItem>
                         <FormLabel>E-posta</FormLabel>
                         <FormControl>
-                          <Input type="email" {...field} value={field.value || ''} />
+                          <Input type="email" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -166,7 +191,7 @@ export default function EmployeeForm() {
                       <FormItem>
                         <FormLabel>Pozisyon</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ''} />
+                          <Input {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -180,7 +205,7 @@ export default function EmployeeForm() {
                       <FormItem>
                         <FormLabel>Departman</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ''} />
+                          <Input {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -203,12 +228,26 @@ export default function EmployeeForm() {
 
                   <FormField
                     control={form.control}
+                    name="totalLeaveAllowance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Yıllık İzin Günü</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="joinDate"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>İşe Başlama Tarihi</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} value={field.value || ''} />
+                          <Input type="date" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -223,12 +262,100 @@ export default function EmployeeForm() {
                     <FormItem>
                       <FormLabel>Adres</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ''} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {/* Emergency Contacts Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Acil Durum İletişim Bilgileri</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => append({ relationship: "", name: "", phone: "" })}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Yeni Ekle
+                    </Button>
+                  </div>
+
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2"
+                        onClick={() => remove(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={`emergencyContacts.${index}.relationship` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>İlişki Türü</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Seçiniz" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {relationshipTypes.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`emergencyContacts.${index}.name` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ad Soyad</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`emergencyContacts.${index}.phone` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Telefon</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="flex justify-end gap-4">
                   <Button
