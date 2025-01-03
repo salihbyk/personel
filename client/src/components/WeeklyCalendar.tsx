@@ -22,6 +22,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -37,6 +39,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
   const [note, setNote] = useState("");
+  const [days, setDays] = useState("1");
   const { toast } = useToast();
 
   const startDate = startOfWeek(new Date(), { locale: tr });
@@ -68,6 +71,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       });
       setSelectedDate(null);
       setNote("");
+      setDays("1");
     },
     onError: (error) => {
       toast({
@@ -107,15 +111,21 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
 
   const isLeaveDay = (date: Date) => {
     return leaves?.some(
-      (leave) =>
-        new Date(leave.startDate).toDateString() === date.toDateString()
+      (leave) => {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        return date >= start && date <= end;
+      }
     );
   };
 
   const getLeave = (date: Date) => {
     return leaves?.find(
-      (leave) =>
-        new Date(leave.startDate).toDateString() === date.toDateString()
+      (leave) => {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        return date >= start && date <= end;
+      }
     );
   };
 
@@ -130,7 +140,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
             <div
               key={day.toISOString()}
               className={cn(
-                "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative",
+                "p-2 rounded-lg border transition-all cursor-pointer hover:shadow-md relative group",
                 hasLeave ? "bg-yellow-100 border-yellow-300" : "hover:bg-accent/50"
               )}
               onClick={() => {
@@ -182,9 +192,22 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
             </DialogTitle>
             <DialogDescription>
               {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: tr })}
+              {Number(days) > 1 && selectedDate && ` - ${format(addDays(selectedDate, Number(days) - 1), "d MMMM yyyy", { locale: tr })}`}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="days">Kaç Gün?</Label>
+              <Input
+                id="days"
+                type="number"
+                min="1"
+                max="30"
+                value={days}
+                onChange={(e) => setDays(e.target.value)}
+                className="w-full"
+              />
+            </div>
             <Textarea
               placeholder="İzin notu ekleyin..."
               value={note}
@@ -199,13 +222,14 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
             <Button
               onClick={() => {
                 if (selectedDate && note.trim()) {
+                  const endDate = addDays(selectedDate, Number(days) - 1);
                   createMutation.mutate({
                     employeeId: employee.id,
                     startDate: selectedDate.toISOString(),
-                    endDate: selectedDate.toISOString(),
+                    endDate: endDate.toISOString(),
                     reason: note,
-                    type: "vacation",
-                    status: "approved",
+                    type: "izin",
+                    status: "onaylandı",
                   });
                 }
               }}
