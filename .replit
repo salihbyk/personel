@@ -7,7 +7,6 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "gce"
-build = ["npm", "run", "build"]
 run = ["sh", "-c", "npm run dev"]
 
 [workflows]
