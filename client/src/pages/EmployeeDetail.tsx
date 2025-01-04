@@ -94,8 +94,9 @@ export default function EmployeeDetail() {
   return (
     <Layout employees={employees || []} isLoading={employeesLoading}>
       <div className="p-8 space-y-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="relative overflow-hidden border-2 border-blue-200">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-blue-50/50" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
             <div>
               <CardTitle>
                 {employee.firstName} {employee.lastName}
@@ -109,7 +110,7 @@ export default function EmployeeDetail() {
                 variant="outline"
                 size="icon"
                 onClick={() => setLocation(`/employee/${id}/edit`)}
-                className="transition-all hover:shadow-md hover:-translate-y-0.5"
+                className="transition-all hover:shadow-md hover:-translate-y-0.5 border-2 border-blue-200"
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -117,17 +118,18 @@ export default function EmployeeDetail() {
                 variant="outline"
                 size="icon"
                 onClick={() => setShowDeleteDialog(true)}
-                className="transition-all hover:shadow-md hover:-translate-y-0.5 hover:text-red-600"
+                className="transition-all hover:shadow-md hover:-translate-y-0.5 hover:text-red-600 border-2 border-red-200"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Card>
-                <CardContent className="pt-6 flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 rounded-full">
+              <Card className="relative overflow-hidden border-2 border-blue-200">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-blue-50/50" />
+                <CardContent className="pt-6 flex items-center gap-4 relative">
+                  <div className="p-3 bg-blue-100 rounded-full shadow-md">
                     <Calendar className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
@@ -139,10 +141,12 @@ export default function EmployeeDetail() {
                     </div>
                   </div>
                 </CardContent>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-300 to-purple-300" />
               </Card>
-              <Card>
-                <CardContent className="pt-6 flex items-center gap-4">
-                  <div className="p-3 bg-yellow-100 rounded-full">
+              <Card className="relative overflow-hidden border-2 border-yellow-200">
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/50 via-white to-yellow-50/50" />
+                <CardContent className="pt-6 flex items-center gap-4 relative">
+                  <div className="p-3 bg-yellow-100 rounded-full shadow-md">
                     <Clock className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
@@ -154,10 +158,12 @@ export default function EmployeeDetail() {
                     </div>
                   </div>
                 </CardContent>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-300 to-orange-300" />
               </Card>
-              <Card>
-                <CardContent className="pt-6 flex items-center gap-4">
-                  <div className="p-3 bg-green-100 rounded-full">
+              <Card className="relative overflow-hidden border-2 border-green-200">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 via-white to-green-50/50" />
+                <CardContent className="pt-6 flex items-center gap-4 relative">
+                  <div className="p-3 bg-green-100 rounded-full shadow-md">
                     <Timer className="h-6 w-6 text-green-600" />
                   </div>
                   <div>
@@ -169,6 +175,7 @@ export default function EmployeeDetail() {
                     </div>
                   </div>
                 </CardContent>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-300 to-teal-300" />
               </Card>
             </div>
 
@@ -184,6 +191,7 @@ export default function EmployeeDetail() {
               </div>
             </div>
           </CardContent>
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-300 to-purple-300" />
         </Card>
 
         <Card>
@@ -205,7 +213,7 @@ export default function EmployeeDetail() {
                 {leaves?.map((leave) => (
                   <div
                     key={leave.id}
-                    className="p-4 rounded-lg border"
+                    className="p-4 rounded-lg border border-gray-300"
                   >
                     <div className="font-medium">
                       {format(new Date(leave.startDate), "d MMMM yyyy", { locale: tr })} -{" "}

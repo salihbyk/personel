@@ -44,7 +44,7 @@ interface WeeklyCalendarProps {
 
 const cardStyle = `
   bg-gradient-to-br from-blue-50 via-white to-blue-50
-  border-blue-100
+  border-2 border-blue-200
   shadow-sm
   hover:shadow-lg
   hover:-translate-y-0.5
@@ -55,13 +55,13 @@ const cardStyle = `
   after:right-0
   after:h-1
   after:bg-gradient-to-r
-  after:from-blue-200
-  after:to-purple-200
+  after:from-blue-300
+  after:to-purple-300
 `;
 
 const leaveCardStyle = `
   bg-gradient-to-br from-blue-100 via-blue-50 to-white 
-  border-blue-300
+  border-2 border-blue-300
   shadow-md
   hover:shadow-lg 
   hover:-translate-y-0.5 
@@ -72,8 +72,8 @@ const leaveCardStyle = `
   after:right-0
   after:h-1
   after:bg-gradient-to-r
-  after:from-blue-300
-  after:to-purple-300
+  after:from-blue-400
+  after:to-purple-400
 `;
 
 export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
