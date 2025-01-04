@@ -44,7 +44,7 @@ interface WeeklyCalendarProps {
 
 const cardStyle = `
   bg-gradient-to-br from-blue-50 via-white to-blue-50
-  border-2 border-blue-200
+  border-2 border-blue-300
   shadow-sm
   hover:shadow-lg
   hover:-translate-y-0.5
@@ -53,15 +53,15 @@ const cardStyle = `
   after:bottom-0
   after:left-0
   after:right-0
-  after:h-1
+  after:h-1.5
   after:bg-gradient-to-r
-  after:from-blue-300
-  after:to-purple-300
+  after:from-blue-400
+  after:to-purple-400
 `;
 
 const leaveCardStyle = `
-  bg-gradient-to-br from-green-100 via-green-50 to-white 
-  border-2 border-green-300
+  bg-gradient-to-br from-red-100 via-red-50 to-white 
+  border-3 border-red-400
   shadow-md
   hover:shadow-lg 
   hover:-translate-y-0.5 
@@ -71,10 +71,10 @@ const leaveCardStyle = `
   after:bottom-0
   after:left-0
   after:right-0
-  after:h-1
+  after:h-1.5
   after:bg-gradient-to-r
-  after:from-green-400
-  after:to-teal-400
+  after:from-red-500
+  after:to-pink-500
 `;
 
 export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
@@ -193,7 +193,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
               variant="outline"
               className={cn(
                 cardStyle,
-                "justify-start text-left font-normal",
+                "justify-start text-left font-normal border-2 border-blue-300",
                 !currentDate && "text-muted-foreground"
               )}
             >
@@ -236,7 +236,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
               <div
                 key={day.toISOString()}
                 className={cn(
-                  "p-1 md:p-2 rounded-lg border transition-all cursor-pointer relative group min-h-[80px] md:min-h-[100px] overflow-hidden",
+                  "p-1 md:p-2 rounded-lg border-2 transition-all cursor-pointer relative group min-h-[80px] md:min-h-[100px] overflow-hidden",
                   hasLeave ? leaveCardStyle : cardStyle,
                   isUpdating && "opacity-50 pointer-events-none"
                 )}
@@ -253,13 +253,13 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                 <div className="text-center space-y-1">
                   <div className={cn(
                     "text-sm font-medium",
-                    hasLeave && "text-green-700"
+                    hasLeave && "text-red-700"
                   )}>
                     {format(day, "EEE", { locale: tr })}
                   </div>
                   <div className={cn(
                     "text-xs",
-                    hasLeave ? "text-green-600" : "text-muted-foreground"
+                    hasLeave ? "text-red-600" : "text-muted-foreground"
                   )}>
                     {format(day, "d", { locale: tr })}
                   </div>
@@ -268,7 +268,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                       <div className="hidden md:block">
                         <Badge 
                           variant="outline" 
-                          className="w-full text-[10px] py-0 border-green-300 text-green-700 bg-green-100"
+                          className="w-full text-[10px] py-0 border-red-400 text-red-700 bg-red-100"
                         >
                           İzinli
                         </Badge>
@@ -276,7 +276,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
                       <div className="block md:hidden">
                         <Badge 
                           variant="outline" 
-                          className="w-6 h-6 p-0 flex items-center justify-center rounded-full border-green-300 text-green-700 bg-green-100"
+                          className="w-6 h-6 p-0 flex items-center justify-center rounded-full border-red-400 text-red-700 bg-red-100"
                         >
                           <Check className="h-3 w-3" />
                         </Badge>
