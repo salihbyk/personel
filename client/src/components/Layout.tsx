@@ -19,11 +19,13 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { Employee, Leave, Achievement } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -56,7 +58,7 @@ function DayDetailDialog({ open, onClose, date, employee, leave, achievement, on
         body: JSON.stringify({
           ...data,
           employeeId: employee.id,
-          date: date.toISOString().split('T')[0],
+          date: format(date, 'yyyy-MM-dd'),
         }),
       });
 
@@ -72,7 +74,6 @@ function DayDetailDialog({ open, onClose, date, employee, leave, achievement, on
         description: "Başarı kaydı güncellendi",
       });
       onUpdateAchievement?.(data);
-      onClose();
     },
     onError: (error: Error) => {
       toast({
@@ -88,7 +89,7 @@ function DayDetailDialog({ open, onClose, date, employee, leave, achievement, on
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {employee.firstName} {employee.lastName} - {date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {employee.firstName} {employee.lastName} - {format(date, 'dd MMMM yyyy', { locale: tr })}
           </DialogTitle>
         </DialogHeader>
 
@@ -103,8 +104,8 @@ function DayDetailDialog({ open, onClose, date, employee, leave, achievement, on
               <div className="space-y-2">
                 <div className="font-medium">İzin Detayları</div>
                 <div className="text-sm text-gray-500">
-                  <div>Başlangıç: {new Date(leave.startDate).toLocaleDateString('tr-TR')}</div>
-                  <div>Bitiş: {new Date(leave.endDate).toLocaleDateString('tr-TR')}</div>
+                  <div>Başlangıç: {format(new Date(leave.startDate), 'dd.MM.yyyy')}</div>
+                  <div>Bitiş: {format(new Date(leave.endDate), 'dd.MM.yyyy')}</div>
                   <div>Sebep: {leave.reason}</div>
                 </div>
               </div>
@@ -148,7 +149,7 @@ function DayDetailDialog({ open, onClose, date, employee, leave, achievement, on
                       onClick={() => achievementMutation.mutate({ stars: value })}
                       className={cn(
                         "p-2",
-                        achievement?.stars >= value ? "text-yellow-500" : "text-gray-300"
+                        achievement?.stars ? Number(achievement.stars) >= value ? "text-yellow-500" : "text-gray-300" : "text-gray-300"
                       )}
                     >
                       <Star className="h-4 w-4 fill-current" />
@@ -157,7 +158,7 @@ function DayDetailDialog({ open, onClose, date, employee, leave, achievement, on
                 </div>
               </div>
 
-              <div className="text-sm text-gray-500 italic">
+              <div className="text-sm text-gray-500 italic text-center">
                 Not: Başarı puanları ve şef görevleri otomatik olarak kaydedilir.
               </div>
             </div>
