@@ -1,4 +1,4 @@
-import { pgTable, text, serial, date, numeric, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, date, numeric, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
@@ -26,16 +26,6 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const achievements = pgTable("achievements", {
-  id: serial("id").primaryKey(),
-  employeeId: serial("employee_id").references(() => employees.id).notNull(),
-  date: date("date").notNull(),
-  isChief: boolean("is_chief").default(false).notNull(),
-  stars: numeric("stars").default(0),
-  note: text("note"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -60,9 +50,22 @@ export const leaves = pgTable("leaves", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const performances = pgTable("performances", {
+  id: serial("id").primaryKey(),
+  employeeId: serial("employee_id").references(() => employees.id).notNull(),
+  date: date("date").notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  rating: numeric("rating"),
+  metrics: jsonb("metrics"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const employeeRelations = relations(employees, ({ many }) => ({
   leaves: many(leaves),
-  achievements: many(achievements),
+  performances: many(performances),
   inventoryItems: many(inventoryItems),
 }));
 
@@ -73,9 +76,9 @@ export const leaveRelations = relations(leaves, ({ one }) => ({
   }),
 }));
 
-export const achievementRelations = relations(achievements, ({ one }) => ({
+export const performanceRelations = relations(performances, ({ one }) => ({
   employee: one(employees, {
-    fields: [achievements.employeeId],
+    fields: [performances.employeeId],
     references: [employees.id],
   }),
 }));
@@ -93,8 +96,8 @@ export const insertEmployeeSchema = createInsertSchema(employees);
 export const selectEmployeeSchema = createSelectSchema(employees);
 export const insertLeaveSchema = createInsertSchema(leaves);
 export const selectLeaveSchema = createSelectSchema(leaves);
-export const insertAchievementSchema = createInsertSchema(achievements);
-export const selectAchievementSchema = createSelectSchema(achievements);
+export const insertPerformanceSchema = createInsertSchema(performances);
+export const selectPerformanceSchema = createSelectSchema(performances);
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems);
 export const selectInventoryItemSchema = createSelectSchema(inventoryItems);
 
@@ -104,8 +107,8 @@ export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
 export type Leave = typeof leaves.$inferSelect;
 export type NewLeave = typeof leaves.$inferInsert;
-export type Achievement = typeof achievements.$inferSelect;
-export type NewAchievement = typeof achievements.$inferInsert;
+export type Performance = typeof performances.$inferSelect;
+export type NewPerformance = typeof performances.$inferInsert;
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type NewInventoryItem = typeof inventoryItems.$inferInsert;
 
