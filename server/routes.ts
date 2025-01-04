@@ -9,7 +9,7 @@ import { employees, leaves, inventoryItems } from "@db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import XlsxPopulate from "xlsx-populate";
 import PDFDocument from "pdfkit";
-import { format, parseISO, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
 
 export function registerRoutes(app: Express): Server {
@@ -151,11 +151,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send("Personel bulunamadı");
       }
 
+      // Tüm yıl için izinleri al
+      const yearStart = new Date(year, 0, 1);
+      const yearEnd = new Date(year, 11, 31);
+
       const employeeLeaves = await db.query.leaves.findMany({
         where: and(
           eq(leaves.employeeId, employeeId),
-          gte(leaves.startDate, startDate.toISOString()),
-          lte(leaves.endDate, endDate.toISOString())
+          gte(leaves.startDate, yearStart.toISOString()),
+          lte(leaves.endDate, yearEnd.toISOString())
         ),
         orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
       });
@@ -197,40 +201,96 @@ export function registerRoutes(app: Express): Server {
       sheet.cell("A5").value("Dönem:").style(subHeaderStyle);
       sheet.cell("B5").value(format(startDate, "MMMM yyyy", { locale: tr }));
 
-      // İzin detayları tablosu
-      sheet.cell("A7").value("Başlangıç").style(tableHeaderStyle);
-      sheet.cell("B7").value("Bitiş").style(tableHeaderStyle);
-      sheet.cell("C7").value("Süre (Gün)").style(tableHeaderStyle);
-      sheet.cell("D7").value("Not").style(tableHeaderStyle);
+      // Seçili ay için izin detayları tablosu
+      sheet.cell("A7").value("AYLIK İZİN DETAYLARI").style(headerStyle);
+      sheet.range("A7:D7").merged(true);
 
-      let row = 8;
-      let totalDays = 0;
+      sheet.cell("A8").value("Başlangıç").style(tableHeaderStyle);
+      sheet.cell("B8").value("Bitiş").style(tableHeaderStyle);
+      sheet.cell("C8").value("Süre (Gün)").style(tableHeaderStyle);
+      sheet.cell("D8").value("Not").style(tableHeaderStyle);
 
-      employeeLeaves.forEach((leave) => {
-        const start = parseISO(leave.startDate);
-        const end = parseISO(leave.endDate);
-        const days = differenceInDays(end, start) + 1;
-        totalDays += days;
+      let row = 9;
+      let monthlyTotalDays = 0;
 
-        sheet.cell(`A${row}`).value(format(start, "dd.MM.yyyy")).style({ border: true });
-        sheet.cell(`B${row}`).value(format(end, "dd.MM.yyyy")).style({ border: true });
-        sheet.cell(`C${row}`).value(days).style({ border: true, horizontalAlignment: "center" });
-        sheet.cell(`D${row}`).value(leave.reason).style({ border: true });
+      employeeLeaves
+        .filter(leave => {
+          const leaveStart = parseISO(leave.startDate);
+          const leaveEnd = parseISO(leave.endDate);
+          return isWithinInterval(leaveStart, { start: startDate, end: endDate }) ||
+                 isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
+                 (leaveStart <= startDate && leaveEnd >= endDate);
+        })
+        .forEach((leave) => {
+          const start = parseISO(leave.startDate);
+          const end = parseISO(leave.endDate);
+          const days = differenceInDays(end, start) + 1;
+          monthlyTotalDays += days;
+
+          sheet.cell(`A${row}`).value(format(start, "dd.MM.yyyy")).style({ border: true });
+          sheet.cell(`B${row}`).value(format(end, "dd.MM.yyyy")).style({ border: true });
+          sheet.cell(`C${row}`).value(days).style({ border: true, horizontalAlignment: "center" });
+          sheet.cell(`D${row}`).value(leave.reason).style({ border: true });
+          row++;
+        });
+
+      // Aylık toplam
+      sheet.cell(`A${row + 1}`).value("Aylık Toplam İzin:").style({ bold: true });
+      sheet.cell(`C${row + 1}`).value(monthlyTotalDays).style({ bold: true, horizontalAlignment: "center" });
+
+      // Yıllık özet tablosu
+      row += 4;
+      sheet.cell(`A${row}`).value("YILLIK İZİN ÖZETİ").style(headerStyle);
+      sheet.range(`A${row}:D${row}`).merged(true);
+      row++;
+
+      sheet.cell(`A${row}`).value("Ay").style(tableHeaderStyle);
+      sheet.cell(`B${row}`).value("İzin Günü").style(tableHeaderStyle);
+      sheet.range(`C${row}:D${row}`).merged(true).value("Not").style(tableHeaderStyle);
+      row++;
+
+      let yearlyTotal = 0;
+      for (let m = 0; m < 12; m++) {
+        const monthStart = new Date(year, m, 1);
+        const monthEnd = endOfMonth(monthStart);
+        let monthlyDays = 0;
+        const monthlyLeaves = employeeLeaves.filter(leave => {
+          const leaveStart = parseISO(leave.startDate);
+          const leaveEnd = parseISO(leave.endDate);
+          return isWithinInterval(leaveStart, { start: monthStart, end: monthEnd }) ||
+                 isWithinInterval(leaveEnd, { start: monthStart, end: monthEnd }) ||
+                 (leaveStart <= monthStart && leaveEnd >= monthEnd);
+        });
+
+        monthlyLeaves.forEach(leave => {
+          const start = parseISO(leave.startDate);
+          const end = parseISO(leave.endDate);
+          const effectiveStart = start < monthStart ? monthStart : start;
+          const effectiveEnd = end > monthEnd ? monthEnd : end;
+          monthlyDays += differenceInDays(effectiveEnd, effectiveStart) + 1;
+        });
+
+        yearlyTotal += monthlyDays;
+
+        sheet.cell(`A${row}`).value(format(monthStart, "MMMM", { locale: tr })).style({ border: true });
+        sheet.cell(`B${row}`).value(monthlyDays).style({ border: true, horizontalAlignment: "center" });
+        sheet.range(`C${row}:D${row}`).merged(true).style({ border: true }).value(
+          monthlyDays > 0 ? monthlyLeaves.map(l => l.reason).join(", ") : "-"
+        );
         row++;
-      });
+      }
 
-      // Toplam
-      sheet.cell(`A${row + 1}`).value("Toplam İzin Günü:").style({ bold: true });
-      sheet.cell(`C${row + 1}`).value(totalDays).style({ bold: true, horizontalAlignment: "center" });
+      // Yıllık toplam
+      sheet.cell(`A${row}`).value("Yıllık Toplam:").style({ bold: true });
+      sheet.cell(`B${row}`).value(yearlyTotal).style({ bold: true, horizontalAlignment: "center" });
 
-      // Otomatik sütun genişliği
+      // Sütun genişlikleri
       sheet.column("A").width(15);
       sheet.column("B").width(15);
       sheet.column("C").width(12);
       sheet.column("D").width(40);
 
       const buffer = await workbook.outputAsync();
-
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=izin-raporu-${format(startDate, "yyyy-MM")}.xlsx`);
       res.send(buffer);
@@ -262,11 +322,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send("Personel bulunamadı");
       }
 
+      // Tüm yıl için izinleri al
+      const yearStart = new Date(year, 0, 1);
+      const yearEnd = new Date(year, 11, 31);
+
       const employeeLeaves = await db.query.leaves.findMany({
         where: and(
           eq(leaves.employeeId, employeeId),
-          gte(leaves.startDate, startDate.toISOString()),
-          lte(leaves.endDate, endDate.toISOString())
+          gte(leaves.startDate, yearStart.toISOString()),
+          lte(leaves.endDate, yearEnd.toISOString())
         ),
         orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
       });
@@ -296,12 +360,8 @@ export function registerRoutes(app: Express): Server {
         res.send(result);
       });
 
-      // Türkçe karakter desteği için font ekle
-      doc.registerFont('Arial', 'Helvetica');
-
-      // Logo ve başlık
+      // Başlık
       doc.fontSize(24)
-         .font('Arial')
          .fillColor('#1e40af')
          .text('Personel İzin Raporu', { align: 'center' });
 
@@ -309,82 +369,148 @@ export function registerRoutes(app: Express): Server {
 
       // Personel bilgileri
       doc.fontSize(12)
-         .font('Arial')
          .fillColor('#374151');
 
-      const infoTable = {
-        headers: ['Personel', 'Pozisyon', 'Dönem'],
-        rows: [[
-          `${employee.firstName} ${employee.lastName}`,
-          employee.position || '-',
-          format(startDate, "MMMM yyyy", { locale: tr })
-        ]]
-      };
+      doc.text(`Personel: ${employee.firstName} ${employee.lastName}`, { continued: true })
+         .text(`     Pozisyon: ${employee.position || "-"}`, { continued: true })
+         .text(`     Dönem: ${format(startDate, "MMMM yyyy", { locale: tr })}`);
 
-      // Info table
-      const infoColumnWidth = 150;
-      const startY = doc.y;
+      doc.moveDown(2);
 
-      // Headers
-      infoTable.headers.forEach((header, i) => {
-        doc.font('Arial-Bold')
-           .text(header, 50 + (i * infoColumnWidth), startY);
-      });
-
-      // Data
-      infoTable.rows[0].forEach((cell, i) => {
-        doc.font('Arial')
-           .text(cell, 50 + (i * infoColumnWidth), startY + 25);
-      });
-
-      doc.moveDown(3);
-
-      // İzin detayları tablosu
-      const tableTop = doc.y;
-      const columnWidth = 130;
-
-      // Tablo başlıkları
-      doc.font('Arial-Bold')
-         .fontSize(11)
-         .fillColor('#1e40af');
-
-      ['Başlangıç', 'Bitiş', 'Süre', 'Not'].forEach((header, i) => {
-        doc.text(header, 50 + (i * columnWidth), tableTop);
-      });
+      // Seçili ay için izin detayları
+      doc.fontSize(16)
+         .fillColor('#1e40af')
+         .text('AYLIK İZİN DETAYLARI');
 
       doc.moveDown();
 
-      // Tablo içeriği
-      let currentY = doc.y;
-      let totalDays = 0;
+      // Tablo başlıkları
+      const monthlyTable = {
+        headers: ['Başlangıç', 'Bitiş', 'Süre', 'Not'],
+        widths: [100, 100, 80, 200]
+      };
 
-      doc.font('Arial')
-         .fontSize(10)
+      let currentY = doc.y;
+      let startX = 50;
+
+      // Headers
+      doc.fontSize(11)
+         .fillColor('#1e40af');
+
+      monthlyTable.headers.forEach((header, i) => {
+        doc.text(header, startX + (i > 0 ? monthlyTable.widths.slice(0, i).reduce((a, b) => a + b, 0) : 0), currentY);
+      });
+
+      currentY += 20;
+
+      // İzin detayları
+      let monthlyTotalDays = 0;
+      doc.fontSize(10)
          .fillColor('#374151');
 
-      employeeLeaves.forEach((leave) => {
+      const monthlyLeaves = employeeLeaves.filter(leave => {
+        const leaveStart = parseISO(leave.startDate);
+        const leaveEnd = parseISO(leave.endDate);
+        return isWithinInterval(leaveStart, { start: startDate, end: endDate }) ||
+               isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
+               (leaveStart <= startDate && leaveEnd >= endDate);
+      });
+
+      monthlyLeaves.forEach((leave) => {
         const start = parseISO(leave.startDate);
         const end = parseISO(leave.endDate);
         const days = differenceInDays(end, start) + 1;
-        totalDays += days;
+        monthlyTotalDays += days;
 
-        // Her satır için arka plan
+        // Satır arkaplanı
         doc.rect(45, currentY - 5, 500, 25)
            .fill('#f8fafc');
 
-        doc.fillColor('#374151')
-           .text(format(start, "dd.MM.yyyy"), 50, currentY)
-           .text(format(end, "dd.MM.yyyy"), 50 + columnWidth, currentY)
-           .text(`${days} gün`, 50 + (2 * columnWidth), currentY)
-           .text(leave.reason || "-", 50 + (3 * columnWidth), currentY);
+        doc.fillColor('#374151');
+        let x = startX;
+
+        doc.text(format(start, "dd.MM.yyyy"), x, currentY);
+        x += monthlyTable.widths[0];
+
+        doc.text(format(end, "dd.MM.yyyy"), x, currentY);
+        x += monthlyTable.widths[1];
+
+        doc.text(`${days} gün`, x, currentY);
+        x += monthlyTable.widths[2];
+
+        doc.text(leave.reason || "-", x, currentY);
 
         currentY += 30;
       });
 
-      // Toplam
       doc.moveDown()
-         .font('Arial-Bold')
-         .text(`Toplam İzin Günü: ${totalDays} gün`, { underline: true });
+         .fontSize(12)
+         .text(`Aylık Toplam İzin: ${monthlyTotalDays} gün`, { underline: true });
+
+      doc.moveDown(2);
+
+      // Yıllık özet
+      doc.fontSize(16)
+         .fillColor('#1e40af')
+         .text('YILLIK İZİN ÖZETİ');
+
+      doc.moveDown();
+
+      let yearlyTotal = 0;
+      currentY = doc.y;
+
+      // Yıllık tablo başlıkları
+      doc.fontSize(11)
+         .text('Ay', 50, currentY)
+         .text('İzin Günü', 150, currentY)
+         .text('Not', 250, currentY);
+
+      currentY += 20;
+
+      // Aylık özetler
+      doc.fontSize(10)
+         .fillColor('#374151');
+
+      for (let m = 0; m < 12; m++) {
+        const monthStart = new Date(year, m, 1);
+        const monthEnd = endOfMonth(monthStart);
+        let monthlyDays = 0;
+        const monthlyLeaves = employeeLeaves.filter(leave => {
+          const leaveStart = parseISO(leave.startDate);
+          const leaveEnd = parseISO(leave.endDate);
+          return isWithinInterval(leaveStart, { start: monthStart, end: monthEnd }) ||
+                 isWithinInterval(leaveEnd, { start: monthStart, end: monthEnd }) ||
+                 (leaveStart <= monthStart && leaveEnd >= monthEnd);
+        });
+
+        monthlyLeaves.forEach(leave => {
+          const start = parseISO(leave.startDate);
+          const end = parseISO(leave.endDate);
+          const effectiveStart = start < monthStart ? monthStart : start;
+          const effectiveEnd = end > monthEnd ? monthEnd : end;
+          monthlyDays += differenceInDays(effectiveEnd, effectiveStart) + 1;
+        });
+
+        yearlyTotal += monthlyDays;
+
+        // Satır arkaplanı
+        if (monthlyDays > 0) {
+          doc.rect(45, currentY - 5, 500, 25)
+             .fill('#f8fafc');
+        }
+
+        doc.fillColor('#374151')
+           .text(format(monthStart, "MMMM", { locale: tr }), 50, currentY)
+           .text(monthlyDays.toString(), 150, currentY)
+           .text(monthlyDays > 0 ? monthlyLeaves.map(l => l.reason).join(", ") : "-", 250, currentY);
+
+        currentY += 25;
+      }
+
+      // Yıllık toplam
+      doc.moveDown()
+         .fontSize(12)
+         .text(`Yıllık Toplam İzin: ${yearlyTotal} gün`, { underline: true });
 
       // Footer
       const bottomOfPage = doc.page.height - 50;
