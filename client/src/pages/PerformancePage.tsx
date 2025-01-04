@@ -131,8 +131,10 @@ export default function PerformancePage() {
       return;
     }
 
+    const currentEmployeeId = parseInt(selectedEmployeeId);
+
     achievementMutation.mutate({
-      employeeId: parseInt(selectedEmployeeId),
+      employeeId: currentEmployeeId,
       date: format(selectedDate, 'yyyy-MM-dd'),
       type: achievementType,
       notes: notes.trim() || undefined,
@@ -269,7 +271,17 @@ export default function PerformancePage() {
                                 ? "bg-gradient-to-br border-gray-300 shadow-sm"
                                 : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                             )}
-                            onClick={() => setSelectedDate(day)}
+                            onClick={() => {
+                              if (!selectedEmployeeId) {
+                                toast({
+                                  title: "Uyarı",
+                                  description: "Lütfen önce bir personel seçin.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              setSelectedDate(day);
+                            }}
                           >
                             <div className="text-xs">{format(day, "d")}</div>
                             {dayAchievement && (
