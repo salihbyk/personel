@@ -50,22 +50,20 @@ export const leaves = pgTable("leaves", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const performances = pgTable("performances", {
+// Yeni tablo: Günlük başarılar/performans
+export const dailyAchievements = pgTable("daily_achievements", {
   id: serial("id").primaryKey(),
   employeeId: serial("employee_id").references(() => employees.id).notNull(),
   date: date("date").notNull(),
-  type: text("type").notNull(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  rating: numeric("rating"),
-  metrics: jsonb("metrics"),
+  type: text("type", { enum: ['STAR', 'CHEF', 'X'] }).notNull(), // Yıldız, Şef veya Zarar
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const employeeRelations = relations(employees, ({ many }) => ({
   leaves: many(leaves),
-  performances: many(performances),
+  achievements: many(dailyAchievements),
   inventoryItems: many(inventoryItems),
 }));
 
@@ -76,9 +74,9 @@ export const leaveRelations = relations(leaves, ({ one }) => ({
   }),
 }));
 
-export const performanceRelations = relations(performances, ({ one }) => ({
+export const achievementRelations = relations(dailyAchievements, ({ one }) => ({
   employee: one(employees, {
-    fields: [performances.employeeId],
+    fields: [dailyAchievements.employeeId],
     references: [employees.id],
   }),
 }));
@@ -96,8 +94,8 @@ export const insertEmployeeSchema = createInsertSchema(employees);
 export const selectEmployeeSchema = createSelectSchema(employees);
 export const insertLeaveSchema = createInsertSchema(leaves);
 export const selectLeaveSchema = createSelectSchema(leaves);
-export const insertPerformanceSchema = createInsertSchema(performances);
-export const selectPerformanceSchema = createSelectSchema(performances);
+export const insertDailyAchievementSchema = createInsertSchema(dailyAchievements);
+export const selectDailyAchievementSchema = createSelectSchema(dailyAchievements);
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems);
 export const selectInventoryItemSchema = createSelectSchema(inventoryItems);
 
@@ -107,8 +105,8 @@ export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
 export type Leave = typeof leaves.$inferSelect;
 export type NewLeave = typeof leaves.$inferInsert;
-export type Performance = typeof performances.$inferSelect;
-export type NewPerformance = typeof performances.$inferInsert;
+export type DailyAchievement = typeof dailyAchievements.$inferSelect;
+export type NewDailyAchievement = typeof dailyAchievements.$inferInsert;
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type NewInventoryItem = typeof inventoryItems.$inferInsert;
 

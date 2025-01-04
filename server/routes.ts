@@ -5,8 +5,8 @@ declare module 'pdfkit';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { employees, leaves, inventoryItems } from "@db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { employees, leaves, inventoryItems, dailyAchievements } from "@db/schema";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 import XlsxPopulate from "xlsx-populate";
 import PDFDocument from "pdfkit";
 import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, isWithinInterval } from "date-fns";
@@ -218,8 +218,8 @@ export function registerRoutes(app: Express): Server {
           const leaveStart = parseISO(leave.startDate);
           const leaveEnd = parseISO(leave.endDate);
           return isWithinInterval(leaveStart, { start: startDate, end: endDate }) ||
-                 isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
-                 (leaveStart <= startDate && leaveEnd >= endDate);
+            isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
+            (leaveStart <= startDate && leaveEnd >= endDate);
         })
         .forEach((leave) => {
           const start = parseISO(leave.startDate);
@@ -258,8 +258,8 @@ export function registerRoutes(app: Express): Server {
           const leaveStart = parseISO(leave.startDate);
           const leaveEnd = parseISO(leave.endDate);
           return isWithinInterval(leaveStart, { start: monthStart, end: monthEnd }) ||
-                 isWithinInterval(leaveEnd, { start: monthStart, end: monthEnd }) ||
-                 (leaveStart <= monthStart && leaveEnd >= monthEnd);
+            isWithinInterval(leaveEnd, { start: monthStart, end: monthEnd }) ||
+            (leaveStart <= monthStart && leaveEnd >= monthEnd);
         });
 
         monthlyLeaves.forEach(leave => {
@@ -357,14 +357,14 @@ export function registerRoutes(app: Express): Server {
 
       // Başlık
       doc.fontSize(24)
-         .fillColor('#1e40af')
-         .text('İzin Raporu', { align: 'center' });
+        .fillColor('#1e40af')
+        .text('İzin Raporu', { align: 'center' });
 
       doc.moveDown();
 
       // Personel bilgileri
       doc.fontSize(12)
-         .fillColor('#374151');
+        .fillColor('#374151');
 
       doc.text(`Personel: ${employee.firstName} ${employee.lastName}`);
       doc.text(`Pozisyon: ${employee.position || "-"}`);
@@ -374,14 +374,14 @@ export function registerRoutes(app: Express): Server {
 
       // Seçili ay için izin detayları
       doc.fontSize(16)
-         .fillColor('#1e40af')
-         .text('Aylık İzin Detayları');
+        .fillColor('#1e40af')
+        .text('Aylık İzin Detayları');
 
       doc.moveDown();
 
       // Tablo başlıkları
       doc.fontSize(11)
-         .fillColor('#374151');
+        .fillColor('#374151');
 
       let yPos = doc.y;
       const colWidths = [100, 100, 60, 200];
@@ -402,8 +402,8 @@ export function registerRoutes(app: Express): Server {
         const leaveStart = parseISO(leave.startDate);
         const leaveEnd = parseISO(leave.endDate);
         return isWithinInterval(leaveStart, { start: startDate, end: endDate }) ||
-               isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
-               (leaveStart <= startDate && leaveEnd >= endDate);
+          isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
+          (leaveStart <= startDate && leaveEnd >= endDate);
       });
 
       monthlyLeaves.forEach((leave) => {
@@ -424,21 +424,21 @@ export function registerRoutes(app: Express): Server {
       });
 
       doc.moveDown()
-         .fontSize(12)
-         .text(`Aylık Toplam: ${monthlyTotal} gün`, { underline: true });
+        .fontSize(12)
+        .text(`Aylık Toplam: ${monthlyTotal} gün`, { underline: true });
 
       doc.moveDown(2);
 
       // Yıllık özet
       doc.fontSize(16)
-         .fillColor('#1e40af')
-         .text('Yıllık İzin Özeti');
+        .fillColor('#1e40af')
+        .text('Yıllık İzin Özeti');
 
       doc.moveDown();
 
       // Yıllık tablo
       doc.fontSize(11)
-         .fillColor('#374151');
+        .fillColor('#374151');
 
       let yearlyTotal = 0;
       const months = Array.from({ length: 12 }, (_, i) => {
@@ -450,8 +450,8 @@ export function registerRoutes(app: Express): Server {
           const leaveStart = parseISO(leave.startDate);
           const leaveEnd = parseISO(leave.endDate);
           return isWithinInterval(leaveStart, { start: monthDate, end: monthEnd }) ||
-                 isWithinInterval(leaveEnd, { start: monthDate, end: monthEnd }) ||
-                 (leaveStart <= monthDate && leaveEnd >= monthEnd);
+            isWithinInterval(leaveEnd, { start: monthDate, end: monthEnd }) ||
+            (leaveStart <= monthDate && leaveEnd >= monthEnd);
         });
 
         monthlyLeaves.forEach(leave => {
@@ -482,16 +482,16 @@ export function registerRoutes(app: Express): Server {
       });
 
       doc.moveDown()
-         .fontSize(12)
-         .text(`Yıllık Toplam: ${yearlyTotal} gün`, { underline: true });
+        .fontSize(12)
+        .text(`Yıllık Toplam: ${yearlyTotal} gün`, { underline: true });
 
       // Footer
       doc.fontSize(8)
-         .fillColor('#6b7280')
-         .text(
-           'Bu rapor otomatik olarak oluşturulmuştur.',
-           { align: 'center' }
-         );
+        .fillColor('#6b7280')
+        .text(
+          'Bu rapor otomatik olarak oluşturulmuştur.',
+          { align: 'center' }
+        );
 
       // PDF'i sonlandır
       doc.end();
@@ -580,6 +580,75 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Envanter silme hatası:", error);
       res.status(500).send("Envanter öğesi silinemedi: " + error.message);
+    }
+  });
+
+  // Daily Achievements API Routes
+  app.get("/api/achievements", async (req, res) => {
+    try {
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const startDate = req.query.startDate ? req.query.startDate as string : undefined;
+      const endDate = req.query.endDate ? req.query.endDate as string : undefined;
+
+      let query = db.select().from(dailyAchievements);
+
+      if (employeeId) {
+        query = query.where(eq(dailyAchievements.employeeId, employeeId));
+      }
+
+      if (startDate && endDate) {
+        query = query.where(
+          and(
+            gte(dailyAchievements.date, startDate),
+            lte(dailyAchievements.date, endDate)
+          )
+        );
+      }
+
+      query = query.orderBy(desc(dailyAchievements.date));
+
+      const achievements = await query;
+      res.json(achievements);
+    } catch (error: any) {
+      console.error("Başarı listesi alınamadı:", error);
+      res.status(500).send("Başarı listesi alınamadı: " + error.message);
+    }
+  });
+
+  app.post("/api/achievements", async (req, res) => {
+    try {
+      const achievement = await db.insert(dailyAchievements).values(req.body).returning();
+      res.json(achievement[0]);
+    } catch (error: any) {
+      console.error("Başarı eklenemedi:", error);
+      res.status(400).send("Başarı eklenemedi: " + error.message);
+    }
+  });
+
+  app.put("/api/achievements/:id", async (req, res) => {
+    try {
+      const achievement = await db
+        .update(dailyAchievements)
+        .set(req.body)
+        .where(eq(dailyAchievements.id, parseInt(req.params.id)))
+        .returning();
+      res.json(achievement[0]);
+    } catch (error: any) {
+      console.error("Başarı güncellenemedi:", error);
+      res.status(400).send("Başarı güncellenemedi: " + error.message);
+    }
+  });
+
+  app.delete("/api/achievements/:id", async (req, res) => {
+    try {
+      await db
+        .delete(dailyAchievements)
+        .where(eq(dailyAchievements.id, parseInt(req.params.id)))
+        .returning();
+      res.json({ message: "Başarı silindi" });
+    } catch (error: any) {
+      console.error("Başarı silinemedi:", error);
+      res.status(400).send("Başarı silinemedi: " + error.message);
     }
   });
 
