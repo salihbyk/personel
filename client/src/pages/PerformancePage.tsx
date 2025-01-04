@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,11 +18,26 @@ import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Employee, DailyAchievement } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function PerformancePage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [achievementType, setAchievementType] = useState<'STAR' | 'CHEF' | 'X'>('STAR');
+  const [notes, setNotes] = useState("");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: employees, isLoading: employeesLoading } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
@@ -32,7 +47,40 @@ export default function PerformancePage() {
     queryKey: ["/api/achievements"],
   });
 
-  // Belirli bir tarih aralığı için başarıları hesapla
+  const achievementMutation = useMutation({
+    mutationFn: async (data: { employeeId: number; date: string; type: string; notes?: string }) => {
+      const response = await fetch("/api/achievements", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/achievements"] });
+      toast({
+        title: "Başarı",
+        description: "Performans değerlendirmesi kaydedildi.",
+      });
+      setSelectedDate(null);
+      setNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const calculateAchievements = (employeeId: number, start: Date, end: Date) => {
     return achievements?.filter(achievement => {
       const achievementDate = parseISO(achievement.date);
@@ -51,7 +99,6 @@ export default function PerformancePage() {
     );
   }
 
-  // Ayın günlerini oluştur
   const daysInMonth = Array.from(
     { length: endOfMonth(currentDate).getDate() },
     (_, i) => new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1)
@@ -72,6 +119,17 @@ export default function PerformancePage() {
       default:
         return null;
     }
+  };
+
+  const handleSaveAchievement = () => {
+    if (!selectedEmployeeId || !selectedDate) return;
+
+    achievementMutation.mutate({
+      employeeId: parseInt(selectedEmployeeId),
+      date: format(selectedDate, 'yyyy-MM-dd'),
+      type: achievementType,
+      notes: notes.trim() || undefined,
+    });
   };
 
   return (
@@ -171,14 +229,16 @@ export default function PerformancePage() {
                         );
 
                         return (
-                          <div
+                          <Button
                             key={day.toISOString()}
+                            variant="ghost"
                             className={cn(
-                              "text-center p-1 rounded-md border-2 transition-all hover:scale-105",
+                              "text-center p-1 rounded-md border-2 transition-all hover:scale-105 h-auto flex-col items-center justify-center",
                               dayAchievement
                                 ? "bg-gradient-to-br border-gray-300 shadow-sm"
                                 : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                             )}
+                            onClick={() => setSelectedDate(day)}
                           >
                             <div className="text-xs">{format(day, "d")}</div>
                             {dayAchievement && (
@@ -186,7 +246,7 @@ export default function PerformancePage() {
                                 {getAchievementIcon(dayAchievement.type)}
                               </div>
                             )}
-                          </div>
+                          </Button>
                         );
                       })}
                     </div>
@@ -260,6 +320,73 @@ export default function PerformancePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!selectedDate} onOpenChange={setSelectedDate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Performans Değerlendirmesi</DialogTitle>
+            <DialogDescription>
+              {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: tr })} tarihli değerlendirme
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <RadioGroup
+              value={achievementType}
+              onValueChange={setAchievementType}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="STAR" id="star" />
+                <Label htmlFor="star" className="flex items-center gap-1 cursor-pointer">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  Yıldız
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="CHEF" id="chef" />
+                <Label htmlFor="chef" className="flex items-center gap-1 cursor-pointer">
+                  <ChefHat className="h-4 w-4 text-blue-500" />
+                  Şef
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="X" id="x" />
+                <Label htmlFor="x" className="flex items-center gap-1 cursor-pointer">
+                  <X className="h-4 w-4 text-red-500" />
+                  Zarar
+                </Label>
+              </div>
+            </RadioGroup>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notlar</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Değerlendirme ile ilgili notlarınızı buraya yazabilirsiniz..."
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSelectedDate(null)}
+            >
+              İptal
+            </Button>
+            <Button
+              onClick={handleSaveAchievement}
+              disabled={!selectedEmployeeId || achievementMutation.isPending}
+            >
+              {achievementMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
