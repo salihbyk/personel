@@ -265,7 +265,7 @@ export default function PerformancePage() {
                 <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tüm Personeller</SelectItem>
+                <SelectItem value="all">Tüm Personeller</SelectItem>
                 {employees?.map((employee) => (
                   <SelectItem key={employee.id} value={employee.id.toString()}>
                     {employee.firstName} {employee.lastName}
@@ -315,7 +315,7 @@ export default function PerformancePage() {
                   return;
                 }
 
-                const url = `/api/achievements/excel?${selectedEmployeeId ? `employeeId=${selectedEmployeeId}&` : ''}date=${format(currentDate, 'yyyy-MM')}`;
+                const url = `/api/achievements/excel?${selectedEmployeeId !== 'all' ? `employeeId=${selectedEmployeeId}&` : ''}date=${format(currentDate, 'yyyy-MM')}`;
                 window.open(url, '_blank');
               }}
             >
@@ -381,6 +381,7 @@ export default function PerformancePage() {
                             )}
                             onClick={() => {
                               setSelectedDate(day);
+                              setSelectedEmployeeId(employee.id.toString());
                               setNotes("");
                             }}
                           >
@@ -413,7 +414,7 @@ export default function PerformancePage() {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="bg-white shadow-sm">
           <CardHeader>
             <CardTitle>Yıllık Performans Özeti - {currentDate.getFullYear()}</CardTitle>
