@@ -122,6 +122,15 @@ export default function PerformancePage() {
   };
 
   const handleSaveAchievement = () => {
+    if (!selectedEmployeeId) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen önce bir personel seçin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!selectedDate) {
       toast({
         title: "Uyarı",
