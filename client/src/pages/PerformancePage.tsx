@@ -272,15 +272,8 @@ export default function PerformancePage() {
                                 : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                             )}
                             onClick={() => {
-                              if (!selectedEmployeeId) {
-                                toast({
-                                  title: "Uyarı",
-                                  description: "Lütfen önce bir personel seçin.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
                               setSelectedDate(day);
+                              setNotes("");
                             }}
                           >
                             <div className="text-xs">{format(day, "d")}</div>
