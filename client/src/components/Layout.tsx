@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   Check,
   Home,
-  BarChart2
+  BarChart2,
+  Target
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
@@ -166,6 +167,15 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             >
               <BarChart2 className="h-4 w-4" />
               Raporlar
+            </Button>
+          </Link>
+          <Link href="/performance">
+            <Button
+              variant={location === "/performance" ? "secondary" : "ghost"}
+              className="w-full justify-start gap-2 transition-all hover:bg-blue-50/50"
+            >
+              <Target className="h-4 w-4" />
+              Performans
             </Button>
           </Link>
         </div>
