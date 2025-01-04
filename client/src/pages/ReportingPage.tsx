@@ -12,11 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, FileSpreadsheet, FileText } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet, Star, Crown, Trophy } from "lucide-react";
 import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import type { Employee, Leave } from "@db/schema";
+import type { Employee, Leave, Achievement } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ReportingPage() {
@@ -32,33 +32,59 @@ export default function ReportingPage() {
     queryKey: ["/api/leaves"],
   });
 
-  // Belirli bir tarih aralığı için izinleri hesapla
-  const calculateLeaves = (employeeId: number, start: Date, end: Date) => {
-    return leaves?.filter(leave => {
-      const leaveStart = parseISO(leave.startDate);
-      const leaveEnd = parseISO(leave.endDate);
+  const { data: achievements } = useQuery<Achievement[]>({
+    queryKey: ["/api/achievements"],
+  });
+
+  // Başarı durumlarını hesapla
+  const calculateAchievements = (employeeId: number, start: Date, end: Date) => {
+    return achievements?.filter(achievement => {
+      const achievementDate = parseISO(achievement.date);
       return (
-        leave.employeeId === employeeId &&
-        (isWithinInterval(leaveStart, { start, end }) ||
-         isWithinInterval(leaveEnd, { start, end }) ||
-         (leaveStart <= start && leaveEnd >= end))
+        achievement.employeeId === employeeId &&
+        isWithinInterval(achievementDate, { start, end })
       );
     }) || [];
   };
 
-  // İzin günlerini hesapla
-  const calculateLeaveDays = (leaves: Leave[], start: Date, end: Date) => {
-    let totalDays = 0;
-    leaves.forEach(leave => {
-      const leaveStart = parseISO(leave.startDate);
-      const leaveEnd = parseISO(leave.endDate);
+  // Ayın personelini bul (en çok yıldız alan)
+  const findEmployeeOfTheMonth = (date: Date) => {
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+    let maxStars = 0;
+    let employeeOfTheMonth: Employee | undefined;
 
-      const effectiveStart = leaveStart < start ? start : leaveStart;
-      const effectiveEnd = leaveEnd > end ? end : leaveEnd;
+    employees?.forEach(employee => {
+      const monthlyAchievements = calculateAchievements(employee.id, start, end);
+      const totalStars = monthlyAchievements.reduce((sum, ach) => sum + Number(ach.stars), 0);
 
-      totalDays += differenceInDays(effectiveEnd, effectiveStart) + 1;
+      if (totalStars > maxStars) {
+        maxStars = totalStars;
+        employeeOfTheMonth = employee;
+      }
     });
-    return totalDays;
+
+    return { employee: employeeOfTheMonth, stars: maxStars };
+  };
+
+  // Ayın ve yılın şefini bul
+  const findChiefStats = (date: Date, isYearly: boolean) => {
+    const start = isYearly ? new Date(date.getFullYear(), 0, 1) : startOfMonth(date);
+    const end = isYearly ? new Date(date.getFullYear(), 11, 31) : endOfMonth(date);
+    let maxChiefDays = 0;
+    let chiefEmployee: Employee | undefined;
+
+    employees?.forEach(employee => {
+      const periodAchievements = calculateAchievements(employee.id, start, end);
+      const chiefDays = periodAchievements.filter(ach => ach.isChief).length;
+
+      if (chiefDays > maxChiefDays) {
+        maxChiefDays = chiefDays;
+        chiefEmployee = employee;
+      }
+    });
+
+    return { employee: chiefEmployee, days: maxChiefDays };
   };
 
   const generateExcelReport = async () => {
@@ -103,48 +129,6 @@ export default function ReportingPage() {
     }
   };
 
-  const generatePdfReport = async () => {
-    try {
-      if (!selectedEmployeeId) {
-        toast({
-          title: "Hata",
-          description: "Lütfen bir personel seçin",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const response = await fetch(`/api/reports/pdf?employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`, {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        throw new Error('Rapor oluşturma hatası');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `izin-raporu-${format(currentDate, 'yyyy-MM')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: "Başarılı",
-        description: "PDF raporu indirildi",
-      });
-    } catch (error) {
-      toast({
-        title: "Hata",
-        description: "Rapor oluşturulurken bir hata oluştu",
-        variant: "destructive",
-      });
-    }
-  };
-
   if (employeesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -163,11 +147,15 @@ export default function ReportingPage() {
     ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId)) 
     : employees;
 
+  const monthlyBest = findEmployeeOfTheMonth(currentDate);
+  const monthlyChief = findChiefStats(currentDate, false);
+  const yearlyChief = findChiefStats(currentDate, true);
+
   return (
     <Layout employees={employees || []} isLoading={employeesLoading}>
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm">
-          <h1 className="text-2xl font-bold">İzin Raporları</h1>
+          <h1 className="text-2xl font-bold">Raporlar</h1>
           <div className="flex flex-wrap items-center gap-2">
             <Select
               value={selectedEmployeeId}
@@ -222,29 +210,81 @@ export default function ReportingPage() {
               <FileSpreadsheet className="h-4 w-4" />
               Excel
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={generatePdfReport} 
-              className="gap-2 bg-white hover:bg-red-50 text-red-600 border-red-200 hover:border-red-300"
-              disabled={!selectedEmployeeId}
-            >
-              <FileText className="h-4 w-4" />
-              PDF
-            </Button>
           </div>
         </div>
 
+        {/* Başarı Özeti */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {monthlyBest.employee && (
+            <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2 text-yellow-700">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  Ayın Personeli
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="font-medium text-yellow-900">
+                  {monthlyBest.employee.firstName} {monthlyBest.employee.lastName}
+                </div>
+                <div className="text-sm text-yellow-700 mt-1 flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-yellow-500" />
+                  {monthlyBest.stars} yıldız
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {monthlyChief.employee && (
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2 text-blue-700">
+                  <Crown className="h-5 w-5 text-blue-500" />
+                  Ayın Şefi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="font-medium text-blue-900">
+                  {monthlyChief.employee.firstName} {monthlyChief.employee.lastName}
+                </div>
+                <div className="text-sm text-blue-700 mt-1">
+                  {monthlyChief.days} gün şeflik
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {yearlyChief.employee && (
+            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2 text-purple-700">
+                  <Crown className="h-5 w-5 text-purple-500" />
+                  Yılın Şefi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="font-medium text-purple-900">
+                  {yearlyChief.employee.firstName} {yearlyChief.employee.lastName}
+                </div>
+                <div className="text-sm text-purple-700 mt-1">
+                  {yearlyChief.days} gün şeflik
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Başarı Takvimi */}
         <Card className="bg-white shadow-sm">
           <CardHeader>
-            <CardTitle>Aylık İzin Raporu - {format(currentDate, "MMMM yyyy", { locale: tr })}</CardTitle>
+            <CardTitle>Aylık Başarı Raporu - {format(currentDate, "MMMM yyyy", { locale: tr })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               {filteredEmployees?.map((employee) => {
                 const monthStart = startOfMonth(currentDate);
                 const monthEnd = endOfMonth(currentDate);
-                const monthlyLeaves = calculateLeaves(employee.id, monthStart, monthEnd);
-                const totalDays = calculateLeaveDays(monthlyLeaves, monthStart, monthEnd);
+                const monthlyAchievements = calculateAchievements(employee.id, monthStart, monthEnd);
 
                 return (
                   <div key={employee.id} className="space-y-2">
@@ -252,29 +292,45 @@ export default function ReportingPage() {
                       <div className="font-medium">
                         {employee.firstName} {employee.lastName}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        Toplam İzin: {totalDays} gün
+                      <div className="text-sm flex items-center gap-4">
+                        <span className="flex items-center gap-1 text-blue-600">
+                          <Crown className="h-4 w-4" />
+                          {monthlyAchievements.filter(a => a.isChief).length} gün
+                        </span>
+                        <span className="flex items-center gap-1 text-yellow-600">
+                          <Star className="h-4 w-4" />
+                          {monthlyAchievements.reduce((sum, a) => sum + Number(a.stars), 0)} yıldız
+                        </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-7 md:grid-cols-31 gap-1">
                       {daysInMonth.map((day) => {
-                        const isLeaveDay = monthlyLeaves.some(leave => {
-                          const startDate = parseISO(leave.startDate);
-                          const endDate = parseISO(leave.endDate);
-                          return isWithinInterval(day, { start: startDate, end: endDate });
-                        });
+                        const dayAchievement = monthlyAchievements.find(a => 
+                          format(parseISO(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+                        );
+
+                        const bgColor = dayAchievement?.isChief
+                          ? "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300 text-blue-700"
+                          : dayAchievement?.stars
+                          ? "bg-gradient-to-br from-yellow-50 to-orange-100 border-orange-300 text-orange-700"
+                          : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white";
 
                         return (
                           <div
                             key={day.toISOString()}
                             className={cn(
                               "text-center text-xs p-1 rounded-md border-2 transition-all hover:scale-105",
-                              isLeaveDay
-                                ? "bg-gradient-to-br from-red-50 to-red-100 border-red-300 text-red-700 font-medium shadow-sm"
-                                : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
+                              bgColor
                             )}
+                            title={dayAchievement?.isChief ? "Şef" : dayAchievement?.stars ? `${dayAchievement.stars} Yıldız` : undefined}
                           >
-                            {format(day, "d")}
+                            <div>{format(day, "d")}</div>
+                            {dayAchievement && (
+                              <div className="flex justify-center mt-1">
+                                {dayAchievement.isChief && <Crown className="h-3 w-3" />}
+                                {dayAchievement.stars > 0 && <Star className="h-3 w-3 fill-current" />}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -282,51 +338,6 @@ export default function ReportingPage() {
                   </div>
                 );
               })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle>Yıllık İzin Özeti - {currentDate.getFullYear()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {filteredEmployees?.map((employee) => (
-                <div key={employee.id} className="space-y-4">
-                  <div className="font-medium">
-                    {employee.firstName} {employee.lastName}
-                  </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const monthDate = new Date(currentDate.getFullYear(), i, 1);
-                      const monthStart = startOfMonth(monthDate);
-                      const monthEnd = endOfMonth(monthDate);
-                      const monthLeaves = calculateLeaves(employee.id, monthStart, monthEnd);
-                      const totalDays = calculateLeaveDays(monthLeaves, monthStart, monthEnd);
-
-                      return (
-                        <div
-                          key={i}
-                          className={cn(
-                            "p-2 text-center rounded-lg border-2 transition-all hover:scale-105",
-                            totalDays > 0
-                              ? "bg-gradient-to-br from-red-50 to-red-100 border-red-300 text-red-700 shadow-sm"
-                              : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
-                          )}
-                        >
-                          <div className="font-medium">
-                            {format(monthDate, "MMM", { locale: tr })}
-                          </div>
-                          <div className="text-xs mt-1">
-                            {totalDays} gün
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>

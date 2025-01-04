@@ -13,18 +13,159 @@ import {
   ChevronLeft,
   Check,
   Home,
-  BarChart2
+  BarChart2,
+  Star,
+  Crown
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
-import type { Employee } from "@db/schema";
+import type { Employee, Leave, Achievement } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface LayoutProps {
   children: React.ReactNode;
   employees: Employee[];
   isLoading?: boolean;
+}
+
+interface DayDetailDialogProps {
+  open: boolean;
+  onClose: () => void;
+  date: Date;
+  employee: Employee;
+  leave?: Leave;
+  achievement?: Achievement;
+  onUpdateLeave?: (leave: Partial<Leave>) => void;
+  onUpdateAchievement?: (achievement: Partial<Achievement>) => void;
+}
+
+function DayDetailDialog({ open, onClose, date, employee, leave, achievement, onUpdateLeave, onUpdateAchievement }: DayDetailDialogProps) {
+  const [activeTab, setActiveTab] = useState<string>("leave");
+  const { toast } = useToast();
+
+  const achievementMutation = useMutation({
+    mutationFn: async (data: Partial<Achievement>) => {
+      const response = await fetch("/api/achievements", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          employeeId: employee.id,
+          date: date.toISOString().split('T')[0],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Başarı",
+        description: "Başarı kaydı güncellendi",
+      });
+      onUpdateAchievement?.(data);
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {employee.firstName} {employee.lastName} - {date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </DialogTitle>
+        </DialogHeader>
+
+        <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
+          <TabsList className="w-full">
+            <TabsTrigger value="leave" className="flex-1">İzin</TabsTrigger>
+            <TabsTrigger value="achievement" className="flex-1">Başarı</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="leave" className="space-y-4">
+            {leave ? (
+              <div className="space-y-2">
+                <div className="font-medium">İzin Detayları</div>
+                <div className="text-sm text-gray-500">
+                  <div>Başlangıç: {new Date(leave.startDate).toLocaleDateString('tr-TR')}</div>
+                  <div>Bitiş: {new Date(leave.endDate).toLocaleDateString('tr-TR')}</div>
+                  <div>Sebep: {leave.reason}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-4">
+                Bu tarihte izin kaydı bulunmuyor
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="achievement" className="space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-blue-500" />
+                  <span>Şef Görevi</span>
+                </div>
+                <Button
+                  variant={achievement?.isChief ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => achievementMutation.mutate({ isChief: !achievement?.isChief })}
+                >
+                  {achievement?.isChief ? (
+                    <Check className="h-4 w-4 mr-1" />
+                  ) : null}
+                  {achievement?.isChief ? "Şef" : "Şef Değil"}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  <span>Yıldız</span>
+                </div>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <Button
+                      key={value}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => achievementMutation.mutate({ stars: value })}
+                      className={cn(
+                        "p-2",
+                        achievement?.stars >= value ? "text-yellow-500" : "text-gray-300"
+                      )}
+                    >
+                      <Star className="h-4 w-4 fill-current" />
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-500 italic">
+                Not: Başarı puanları ve şef görevleri otomatik olarak kaydedilir.
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function Layout({ children, employees, isLoading }: LayoutProps) {
@@ -36,6 +177,11 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
   const [debouncedGlobalTerm, setDebouncedGlobalTerm] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { toast } = useToast();
+  const [dayDetailDialogOpen, setDayDetailDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [leave, setLeave] = useState<Leave | undefined>(undefined);
+  const [achievement, setAchievement] = useState<Achievement | undefined>(undefined);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSidebarTerm(sidebarSearchTerm), 300);
@@ -358,6 +504,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             {children}
           </div>
         </main>
+        <DayDetailDialog open={dayDetailDialogOpen} onClose={() => setDayDetailDialogOpen(false)} date={selectedDate || new Date()} employee={selectedEmployee || {id:0, firstName:'', lastName:'', position:'', department: '', salary:0}} leave={leave} achievement={achievement} onUpdateLeave={setLeave} onUpdateAchievement={setAchievement}/>
       </div>
     </div>
   );
