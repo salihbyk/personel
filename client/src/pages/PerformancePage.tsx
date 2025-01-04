@@ -321,7 +321,7 @@ export default function PerformancePage() {
         </Card>
       </div>
 
-      <Dialog open={!!selectedDate} onOpenChange={setSelectedDate}>
+      <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Performans Değerlendirmesi</DialogTitle>
@@ -333,7 +333,7 @@ export default function PerformancePage() {
           <div className="space-y-6 py-4">
             <RadioGroup
               value={achievementType}
-              onValueChange={setAchievementType}
+              onValueChange={(value) => setAchievementType(value as 'STAR' | 'CHEF' | 'X')}
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
@@ -360,7 +360,7 @@ export default function PerformancePage() {
             </RadioGroup>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notlar</Label>
+              <Label htmlFor="notes">Notlar (Opsiyonel)</Label>
               <Textarea
                 id="notes"
                 value={notes}
