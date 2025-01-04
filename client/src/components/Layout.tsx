@@ -12,7 +12,8 @@ import {
   LogOut,
   ChevronLeft,
   Check,
-  Home
+  Home,
+  BarChart2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
@@ -148,7 +149,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
           </Link>
         </div>
 
-        <div className="px-2 py-2 border-b border-gray-200">
+        <div className="px-2 py-2 border-b border-gray-200 space-y-1">
           <Link href="/">
             <Button
               variant={location === "/" ? "secondary" : "ghost"}
@@ -156,6 +157,15 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             >
               <Home className="h-4 w-4" />
               Ana Sayfa
+            </Button>
+          </Link>
+          <Link href="/reports">
+            <Button
+              variant={location === "/reports" ? "secondary" : "ghost"}
+              className="w-full justify-start gap-2 transition-all hover:bg-blue-50/50"
+            >
+              <BarChart2 className="h-4 w-4" />
+              Raporlar
             </Button>
           </Link>
         </div>
