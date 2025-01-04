@@ -665,15 +665,6 @@ export function registerRoutes(app: Express): Server {
       const startDate = startOfMonth(new Date(year, month - 1));
       const endDate = endOfMonth(new Date(year, month - 1));
 
-      // Tüm personelleri al
-      const allEmployees = await db.query.employees.findMany({
-        where: employeeId ? eq(employees.id, employeeId) : undefined,
-      });
-
-      // Excel dosyası oluştur
-      const workbook = await XlsxPopulate.fromBlankAsync();
-      const sheet = workbook.sheet(0);
-
       // Stil tanımlamaları
       const headerStyle = {
         bold: true,
@@ -695,67 +686,157 @@ export function registerRoutes(app: Express): Server {
         border: true
       };
 
-      // Başlık
-      sheet.cell("A1").value("Aylık Performans Raporu").style(headerStyle);
-      sheet.range("A1:F1").merged(true);
+      // Excel dosyası oluştur
+      const workbook = await XlsxPopulate.fromBlankAsync();
+      const sheet = workbook.sheet(0);
 
-      sheet.cell("A3").value("Dönem:").style(subHeaderStyle);
-      sheet.cell("B3").value(format(startDate, "MMMM yyyy", { locale: tr }));
+      if (employeeId) {
+        // Tek personel detaylı rapor
+        const employee = await db.query.employees.findFirst({
+          where: eq(employees.id, employeeId),
+        });
 
-      // Tablo başlıkları
-      let row = 5;
-      sheet.cell(`A${row}`).value("Ad Soyad").style(tableHeaderStyle);
-      sheet.cell(`B${row}`).value("Pozisyon").style(tableHeaderStyle);
-      sheet.cell(`C${row}`).value("Yıldız").style(tableHeaderStyle);
-      sheet.cell(`D${row}`).value("Şef").style(tableHeaderStyle);
-      sheet.cell(`E${row}`).value("Zarar").style(tableHeaderStyle);
-      sheet.cell(`F${row}`).value("Toplam").style(tableHeaderStyle);
-      row++;
+        if (!employee) {
+          return res.status(404).send("Personel bulunamadı");
+        }
 
-      // Her personel için performans verilerini al
-      for (const employee of allEmployees) {
         const achievements = await db.query.dailyAchievements.findMany({
           where: and(
-            eq(dailyAchievements.employeeId, employee.id),
+            eq(dailyAchievements.employeeId, employeeId),
             gte(dailyAchievements.date, startDate.toISOString()),
             lte(dailyAchievements.date, endDate.toISOString())
           ),
           orderBy: (achievements, { asc }) => [asc(achievements.date)],
         });
 
-        const stats = {
-          STAR: achievements.filter(a => a.type === 'STAR').length,
-          CHEF: achievements.filter(a => a.type === 'CHEF').length,
-          X: achievements.filter(a => a.type === 'X').length,
+        // Başlık
+        sheet.cell("A1").value("Personel Performans Raporu").style(headerStyle);
+        sheet.range("A1:E1").merged(true);
+
+        // Personel bilgileri
+        sheet.cell("A3").value("Personel Adı:").style(subHeaderStyle);
+        sheet.cell("B3").value(`${employee.firstName} ${employee.lastName}`);
+        sheet.cell("A4").value("Pozisyon:").style(subHeaderStyle);
+        sheet.cell("B4").value(employee.position || "-");
+        sheet.cell("A5").value("Dönem:").style(subHeaderStyle);
+        sheet.cell("B5").value(format(startDate, "MMMM yyyy", { locale: tr }));
+
+        // Başarı detayları tablosu
+        sheet.cell("A7").value("AYLIK PERFORMANS DETAYLARI").style(headerStyle);
+        sheet.range("A7:D7").merged(true);
+
+        sheet.cell("A8").value("Tarih").style(tableHeaderStyle);
+        sheet.cell("B8").value("Tip").style(tableHeaderStyle);
+        sheet.cell("C8").value("Not").style(tableHeaderStyle);
+
+        let row = 9;
+        let stats = {
+          STAR: 0,
+          CHEF: 0,
+          X: 0,
         };
 
-        sheet.cell(`A${row}`).value(`${employee.firstName} ${employee.lastName}`).style({ border: true });
-        sheet.cell(`B${row}`).value(employee.position || "-").style({ border: true });
-        sheet.cell(`C${row}`).value(stats.STAR).style({ border: true, horizontalAlignment: "center" });
-        sheet.cell(`D${row}`).value(stats.CHEF).style({ border: true, horizontalAlignment: "center" });
-        sheet.cell(`E${row}`).value(stats.X).style({ border: true, horizontalAlignment: "center" });
-        sheet.cell(`F${row}`).value(stats.STAR + stats.CHEF + stats.X).style({ border: true, horizontalAlignment: "center" });
+        achievements.forEach((achievement) => {
+          const achievementDate = parseISO(achievement.date);
+          stats[achievement.type as keyof typeof stats]++;
+
+          sheet.cell(`A${row}`).value(format(achievementDate, "dd.MM.yyyy")).style({ border: true });
+          sheet.cell(`B${row}`).value({
+            'STAR': 'Yıldız',
+            'CHEF': 'Şef',
+            'X': 'Zarar'
+          }[achievement.type]).style({ border: true });
+          sheet.cell(`C${row}`).value(achievement.notes || "-").style({ border: true });
+          row++;
+        });
+
+        // Aylık özet
+        row += 2;
+        sheet.cell(`A${row}`).value("AYLIK ÖZET").style(headerStyle);
+        sheet.range(`A${row}:C${row}`).merged(true);
         row++;
+
+        sheet.cell(`A${row}`).value("Yıldız:").style(subHeaderStyle);
+        sheet.cell(`B${row}`).value(stats.STAR);
+        row++;
+
+        sheet.cell(`A${row}`).value("Şef:").style(subHeaderStyle);
+        sheet.cell(`B${row}`).value(stats.CHEF);
+        row++;
+
+        sheet.cell(`A${row}`).value("Zarar:").style(subHeaderStyle);
+        sheet.cell(`B${row}`).value(stats.X);
+
+        // Sütun genişlikleri
+        sheet.column("A").width(15);
+        sheet.column("B").width(15);
+        sheet.column("C").width(40);
+
+      } else {
+        // Tüm personeller için özet rapor
+        const allEmployees = await db.query.employees.findMany();
+
+        // Başlık
+        sheet.cell("A1").value("Aylık Performans Raporu").style(headerStyle);
+        sheet.range("A1:F1").merged(true);
+
+        sheet.cell("A3").value("Dönem:").style(subHeaderStyle);
+        sheet.cell("B3").value(format(startDate, "MMMM yyyy", { locale: tr }));
+
+        // Tablo başlıkları
+        let row = 5;
+        sheet.cell(`A${row}`).value("Ad Soyad").style(tableHeaderStyle);
+        sheet.cell(`B${row}`).value("Pozisyon").style(tableHeaderStyle);
+        sheet.cell(`C${row}`).value("Yıldız").style(tableHeaderStyle);
+        sheet.cell(`D${row}`).value("Şef").style(tableHeaderStyle);
+        sheet.cell(`E${row}`).value("Zarar").style(tableHeaderStyle);
+        sheet.cell(`F${row}`).value("Toplam").style(tableHeaderStyle);
+        row++;
+
+        // Her personel için performans verilerini al
+        for (const employee of allEmployees) {
+          const achievements = await db.query.dailyAchievements.findMany({
+            where: and(
+              eq(dailyAchievements.employeeId, employee.id),
+              gte(dailyAchievements.date, startDate.toISOString()),
+              lte(dailyAchievements.date, endDate.toISOString())
+            ),
+            orderBy: (achievements, { asc }) => [asc(achievements.date)],
+          });
+
+          const stats = {            STAR: achievements.filter(a => a.type === 'STAR').length,
+            CHEF: achievements.filter(a => a.type === 'CHEF').length,
+            X: achievements.filter(a => a.type === 'X').length,
+          };
+
+          sheet.cell(`A${row}`).value(`${employee.firstName} ${employee.lastName}`).style({ border: true });
+          sheet.cell(`B${row}`).value(employee.position || "-").style({ border: true });
+          sheet.cell(`C${row}`).value(stats.STAR).style({ border: true, horizontalAlignment: "center" });
+          sheet.cell(`D${row}`).value(stats.CHEF).style({ border: true, horizontalAlignment: "center" });
+          sheet.cell(`E${row}`).value(stats.X).style({ border: true, horizontalAlignment: "center" });
+          sheet.cell(`F${row}`).value(stats.STAR + stats.CHEF + stats.X).style({ border: true, horizontalAlignment: "center" });
+          row++;
+        }
+
+        // Toplam satırı
+        row++;
+        sheet.cell(`A${row}`).value("TOPLAM").style(subHeaderStyle);
+        sheet.range(`A${row}:B${row}`).merged(true);
+
+        // Toplam formülleri
+        sheet.cell(`C${row}`).formula(`=SUM(C6:C${row-2})`).style(subHeaderStyle);
+        sheet.cell(`D${row}`).formula(`=SUM(D6:D${row-2})`).style(subHeaderStyle);
+        sheet.cell(`E${row}`).formula(`=SUM(E6:E${row-2})`).style(subHeaderStyle);
+        sheet.cell(`F${row}`).formula(`=SUM(F6:F${row-2})`).style(subHeaderStyle);
+
+        // Sütun genişlikleri
+        sheet.column("A").width(30);
+        sheet.column("B").width(20);
+        sheet.column("C").width(15);
+        sheet.column("D").width(15);
+        sheet.column("E").width(15);
+        sheet.column("F").width(15);
       }
-
-      // Toplam satırı
-      row++;
-      sheet.cell(`A${row}`).value("TOPLAM").style(subHeaderStyle);
-      sheet.range(`A${row}:B${row}`).merged(true);
-
-      // Toplam formülleri
-      sheet.cell(`C${row}`).formula(`=SUM(C6:C${row-2})`).style(subHeaderStyle);
-      sheet.cell(`D${row}`).formula(`=SUM(D6:D${row-2})`).style(subHeaderStyle);
-      sheet.cell(`E${row}`).formula(`=SUM(E6:E${row-2})`).style(subHeaderStyle);
-      sheet.cell(`F${row}`).formula(`=SUM(F6:F${row-2})`).style(subHeaderStyle);
-
-      // Sütun genişlikleri
-      sheet.column("A").width(30);
-      sheet.column("B").width(20);
-      sheet.column("C").width(15);
-      sheet.column("D").width(15);
-      sheet.column("E").width(15);
-      sheet.column("F").width(15);
 
       const buffer = await workbook.outputAsync();
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

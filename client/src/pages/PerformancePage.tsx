@@ -122,10 +122,10 @@ export default function PerformancePage() {
   };
 
   const handleSaveAchievement = () => {
-    if (!selectedDate || !selectedEmployeeId) {
+    if (!selectedDate) {
       toast({
         title: "Uyarı",
-        description: "Lütfen personel ve tarih seçin.",
+        description: "Lütfen tarih seçin.",
         variant: "destructive",
       });
       return;
@@ -140,7 +140,7 @@ export default function PerformancePage() {
   };
 
   const handleExcelDownload = () => {
-    if (!selectedEmployeeId && !currentDate) {
+    if (!currentDate) {
       toast({
         title: "Uyarı",
         description: "Lütfen ay seçin.",
@@ -149,8 +149,7 @@ export default function PerformancePage() {
       return;
     }
 
-    // Tüm personeller için genel rapor
-    const url = `/api/achievements/excel?date=${format(currentDate, 'yyyy-MM')}`;
+    const url = `/api/achievements/excel?${selectedEmployeeId ? `employeeId=${selectedEmployeeId}&` : ''}date=${format(currentDate, 'yyyy-MM')}`;
     window.open(url, '_blank');
   };
 
