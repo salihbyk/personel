@@ -122,7 +122,14 @@ export default function PerformancePage() {
   };
 
   const handleSaveAchievement = () => {
-    if (!selectedEmployeeId || !selectedDate) return;
+    if (!selectedDate || !selectedEmployeeId) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen personel ve tarih seçin.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     achievementMutation.mutate({
       employeeId: parseInt(selectedEmployeeId),
@@ -133,16 +140,17 @@ export default function PerformancePage() {
   };
 
   const handleExcelDownload = () => {
-    if (!selectedEmployeeId) {
+    if (!selectedEmployeeId && !currentDate) {
       toast({
         title: "Uyarı",
-        description: "Lütfen önce bir personel seçin.",
+        description: "Lütfen ay seçin.",
         variant: "destructive",
       });
       return;
     }
 
-    const url = `/api/achievements/excel?employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`;
+    // Tüm personeller için genel rapor
+    const url = `/api/achievements/excel?date=${format(currentDate, 'yyyy-MM')}`;
     window.open(url, '_blank');
   };
 
