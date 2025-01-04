@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Star, ChefHat, X } from "lucide-react";
+import { CalendarIcon, Star, ChefHat, X, Download } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -104,8 +104,8 @@ export default function PerformancePage() {
     (_, i) => new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1)
   );
 
-  const filteredEmployees = selectedEmployeeId 
-    ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId)) 
+  const filteredEmployees = selectedEmployeeId
+    ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId))
     : employees;
 
   const getAchievementIcon = (type: string) => {
@@ -124,13 +124,26 @@ export default function PerformancePage() {
   const handleSaveAchievement = () => {
     if (!selectedEmployeeId || !selectedDate) return;
 
-    // Type Assertion to ensure employeeId is a number
     achievementMutation.mutate({
-      employeeId: parseInt(selectedEmployeeId) as number, 
+      employeeId: parseInt(selectedEmployeeId),
       date: format(selectedDate, 'yyyy-MM-dd'),
       type: achievementType,
       notes: notes.trim() || undefined,
     });
+  };
+
+  const handleExcelDownload = () => {
+    if (!selectedEmployeeId) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen önce bir personel seçin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const url = `/api/achievements/excel?employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -182,6 +195,16 @@ export default function PerformancePage() {
                 />
               </PopoverContent>
             </Popover>
+
+            <Button
+              variant="outline"
+              className="bg-white gap-2"
+              onClick={handleExcelDownload}
+              disabled={!selectedEmployeeId}
+            >
+              <Download className="h-4 w-4" />
+              Excel İndir
+            </Button>
           </div>
         </div>
 
@@ -322,7 +345,12 @@ export default function PerformancePage() {
         </Card>
       </div>
 
-      <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
+      <Dialog open={!!selectedDate} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedDate(null);
+          setNotes("");
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Performans Değerlendirmesi</DialogTitle>
@@ -375,13 +403,15 @@ export default function PerformancePage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setSelectedDate(null)}
+              onClick={() => {
+                setSelectedDate(null);
+                setNotes("");
+              }}
             >
               İptal
             </Button>
             <Button
               onClick={handleSaveAchievement}
-              disabled={!selectedEmployeeId || achievementMutation.isPending}
             >
               {achievementMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>

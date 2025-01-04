@@ -652,6 +652,135 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/achievements/excel", async (req, res) => {
+    try {
+      const employeeId = parseInt(req.query.employeeId as string);
+      const date = req.query.date as string;
+
+      if (!employeeId || !date) {
+        return res.status(400).send("Personel ID ve tarih zorunludur");
+      }
+
+      const [year, month] = date.split("-").map(Number);
+      const startDate = startOfMonth(new Date(year, month - 1));
+      const endDate = endOfMonth(new Date(year, month - 1));
+
+      const employee = await db.query.employees.findFirst({
+        where: eq(employees.id, employeeId),
+      });
+
+      if (!employee) {
+        return res.status(404).send("Personel bulunamadı");
+      }
+
+      const achievements = await db.query.dailyAchievements.findMany({
+        where: and(
+          eq(dailyAchievements.employeeId, employeeId),
+          gte(dailyAchievements.date, startDate.toISOString()),
+          lte(dailyAchievements.date, endDate.toISOString())
+        ),
+        orderBy: (achievements, { asc }) => [asc(achievements.date)],
+      });
+
+      // Excel dosyası oluştur
+      const workbook = await XlsxPopulate.fromBlankAsync();
+      const sheet = workbook.sheet(0);
+
+      // Stil tanımlamaları
+      const headerStyle = {
+        bold: true,
+        fontSize: 16,
+        horizontalAlignment: "center",
+        fontColor: "0000FF"
+      };
+
+      const subHeaderStyle = {
+        bold: true,
+        fontSize: 11,
+        fill: "F0F0F0"
+      };
+
+      const tableHeaderStyle = {
+        bold: true,
+        fill: "E0E0E0",
+        horizontalAlignment: "center",
+        border: true
+      };
+
+      // Başlık
+      sheet.cell("A1").value("Personel Performans Raporu").style(headerStyle);
+      sheet.range("A1:E1").merged(true);
+
+      // Personel bilgileri
+      sheet.cell("A3").value("Personel Adı:").style(subHeaderStyle);
+      sheet.cell("B3").value(`${employee.firstName} ${employee.lastName}`);
+      sheet.cell("A4").value("Pozisyon:").style(subHeaderStyle);
+      sheet.cell("B4").value(employee.position || "-");
+      sheet.cell("A5").value("Dönem:").style(subHeaderStyle);
+      sheet.cell("B5").value(format(startDate, "MMMM yyyy", { locale: tr }));
+
+      // Başarı detayları tablosu
+      sheet.cell("A7").value("AYLIK PERFORMANS DETAYLARI").style(headerStyle);
+      sheet.range("A7:D7").merged(true);
+
+      sheet.cell("A8").value("Tarih").style(tableHeaderStyle);
+      sheet.cell("B8").value("Tip").style(tableHeaderStyle);
+      sheet.cell("C8").value("Not").style(tableHeaderStyle);
+
+      let row = 9;
+      let stats = {
+        STAR: 0,
+        CHEF: 0,
+        X: 0,
+      };
+
+      achievements.forEach((achievement) => {
+        const achievementDate = parseISO(achievement.date);
+        stats[achievement.type as keyof typeof stats]++;
+
+        sheet.cell(`A${row}`).value(format(achievementDate, "dd.MM.yyyy")).style({ border: true });
+        sheet.cell(`B${row}`).value({
+          'STAR': 'Yıldız',
+          'CHEF': 'Şef',
+          'X': 'Zarar'
+        }[achievement.type]).style({ border: true });
+        sheet.cell(`C${row}`).value(achievement.notes || "-").style({ border: true });
+        row++;
+      });
+
+      // Aylık özet
+      row += 2;
+      sheet.cell(`A${row}`).value("AYLIK ÖZET").style(headerStyle);
+      sheet.range(`A${row}:C${row}`).merged(true);
+      row++;
+
+      sheet.cell(`A${row}`).value("Yıldız:").style(subHeaderStyle);
+      sheet.cell(`B${row}`).value(stats.STAR);
+      row++;
+
+      sheet.cell(`A${row}`).value("Şef:").style(subHeaderStyle);
+      sheet.cell(`B${row}`).value(stats.CHEF);
+      row++;
+
+      sheet.cell(`A${row}`).value("Zarar:").style(subHeaderStyle);
+      sheet.cell(`B${row}`).value(stats.X);
+
+      // Sütun genişlikleri
+      sheet.column("A").width(15);
+      sheet.column("B").width(15);
+      sheet.column("C").width(40);
+
+      const buffer = await workbook.outputAsync();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=performans-raporu-${format(startDate, "yyyy-MM")}.xlsx`);
+      res.send(buffer);
+
+    } catch (error: any) {
+      console.error("Excel rapor hatası:", error);
+      res.status(500).send("Rapor oluşturulamadı: " + error.message);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
