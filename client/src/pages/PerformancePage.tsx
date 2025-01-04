@@ -124,8 +124,9 @@ export default function PerformancePage() {
   const handleSaveAchievement = () => {
     if (!selectedEmployeeId || !selectedDate) return;
 
+    // Type Assertion to ensure employeeId is a number
     achievementMutation.mutate({
-      employeeId: parseInt(selectedEmployeeId),
+      employeeId: parseInt(selectedEmployeeId) as number, 
       date: format(selectedDate, 'yyyy-MM-dd'),
       type: achievementType,
       notes: notes.trim() || undefined,
