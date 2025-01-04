@@ -12,12 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Star, ChefHat, X, Download, Trash2 } from "lucide-react";
+import { CalendarIcon, Star, ChefHat, X, Download, Trash2, AlertCircle } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Employee, DailyAchievement } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -30,35 +31,54 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+type EmployeeWithStats = Employee & {
+  stars: number;
+  chefs: number;
+  damages: number;
+};
+
 export default function PerformancePage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [achievementType, setAchievementType] = useState<'STAR' | 'CHEF' | 'X'>('STAR');
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: employees, isLoading: employeesLoading } = useQuery<Employee[]>({
+  const { data: employees, isLoading: employeesLoading, error: employeesError } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
+    retry: false,
+    onError: (error: Error) => {
+      logger.error("Failed to fetch employees", error, { endpoint: "/api/employees" });
+    }
   });
 
-  const { data: achievements } = useQuery<DailyAchievement[]>({
+  const { data: achievements, error: achievementsError } = useQuery<DailyAchievement[]>({
     queryKey: ["/api/achievements"],
+    retry: false,
+    onError: (error: Error) => {
+      logger.error("Failed to fetch achievements", error, { endpoint: "/api/achievements" });
+    }
   });
 
-  // Başarı silme mutation'ı
   const deleteAchievementMutation = useMutation({
     mutationFn: async (achievementId: number) => {
-      const response = await fetch(`/api/achievements/${achievementId}`, {
-        method: "DELETE",
-      });
+      try {
+        const response = await fetch(`/api/achievements/${achievementId}`, {
+          method: "DELETE",
+        });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+
+        return response.json();
+      } catch (error) {
+        logger.error("Failed to delete achievement", error as Error, { achievementId });
+        throw error;
       }
-
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/achievements"] });
@@ -66,11 +86,12 @@ export default function PerformancePage() {
         title: "Başarı",
         description: "Performans değerlendirmesi silindi.",
       });
+      logger.info("Achievement deleted successfully");
     },
     onError: (error: Error) => {
       toast({
         title: "Hata",
-        description: error.message,
+        description: "Performans değerlendirmesi silinemedi: " + error.message,
         variant: "destructive",
       });
     },
@@ -78,19 +99,25 @@ export default function PerformancePage() {
 
   const achievementMutation = useMutation({
     mutationFn: async (data: { employeeId: number; date: string; type: string; notes?: string }) => {
-      const response = await fetch("/api/achievements", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      try {
+        const response = await fetch("/api/achievements", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+
+        return response.json();
+      } catch (error) {
+        logger.error("Failed to save achievement", error as Error, { data });
+        throw error;
       }
-
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/achievements"] });
@@ -100,24 +127,53 @@ export default function PerformancePage() {
       });
       setSelectedDate(null);
       setNotes("");
+      logger.info("Achievement saved successfully");
     },
     onError: (error: Error) => {
       toast({
         title: "Hata",
-        description: error.message,
+        description: "Performans değerlendirmesi kaydedilemedi: " + error.message,
         variant: "destructive",
       });
     },
   });
 
+  // Error states handling
+  if (employeesError || achievementsError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md mx-4">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive mb-4">
+              <AlertCircle className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">Bir Hata Oluştu</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              {employeesError ? "Personel listesi alınamadı" : "Performans verileri alınamadı"}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="w-full"
+            >
+              Sayfayı Yenile
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const calculateAchievements = (employeeId: number, start: Date, end: Date) => {
-    return achievements?.filter(achievement => {
+    if (!achievements) return [];
+
+    return achievements.filter(achievement => {
       const achievementDate = parseISO(achievement.date);
       return (
         achievement.employeeId === employeeId &&
         isWithinInterval(achievementDate, { start, end })
       );
-    }) || [];
+    });
   };
 
   const calculateTopPerformers = () => {
@@ -159,9 +215,9 @@ export default function PerformancePage() {
     (_, i) => new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1)
   );
 
-  const filteredEmployees = selectedEmployeeId
-    ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId))
-    : employees;
+  const filteredEmployees = selectedEmployeeId === "all"
+    ? employees
+    : employees?.filter(emp => emp.id === parseInt(selectedEmployeeId));
 
   const getAchievementIcon = (type: string) => {
     switch (type) {
@@ -186,7 +242,7 @@ export default function PerformancePage() {
       return;
     }
 
-    if (!selectedEmployeeId) {
+    if (!selectedEmployeeId || selectedEmployeeId === "all") {
       toast({
         title: "Uyarı",
         description: "Lütfen personel seçin.",
@@ -414,7 +470,7 @@ export default function PerformancePage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-white shadow-sm">
           <CardHeader>
             <CardTitle>Yıllık Performans Özeti - {currentDate.getFullYear()}</CardTitle>
