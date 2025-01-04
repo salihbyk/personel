@@ -158,6 +158,48 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.put("/api/inventory/:id", async (req, res) => {
+    try {
+      const { name, notes } = req.body;
+
+      if (!name) {
+        return res.status(400).send("Eşya adı gereklidir");
+      }
+
+      const updatedItem = await db
+        .update(inventoryItems)
+        .set({
+          name,
+          notes: notes || null,
+        })
+        .where(eq(inventoryItems.id, parseInt(req.params.id)))
+        .returning();
+
+      res.json(updatedItem[0]);
+    } catch (error: any) {
+      console.error("Envanter güncelleme hatası:", error);
+      res.status(500).send("Envanter öğesi güncellenemedi: " + error.message);
+    }
+  });
+
+  app.delete("/api/inventory/:id", async (req, res) => {
+    try {
+      const result = await db
+        .delete(inventoryItems)
+        .where(eq(inventoryItems.id, parseInt(req.params.id)))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).send("Envanter öğesi bulunamadı");
+      }
+
+      res.json({ message: "Envanter öğesi silindi", item: result[0] });
+    } catch (error: any) {
+      console.error("Envanter silme hatası:", error);
+      res.status(500).send("Envanter öğesi silinemedi: " + error.message);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

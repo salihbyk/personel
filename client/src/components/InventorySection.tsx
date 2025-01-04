@@ -30,13 +30,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,22 +39,6 @@ import { inventoryItemSchema } from "@/lib/schemas";
 import type { Employee, InventoryItem } from "@db/schema";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import type { z } from "zod";
-
-const itemTypes = [
-  { value: "laptop", label: "Dizüstü Bilgisayar" },
-  { value: "phone", label: "Telefon" },
-  { value: "tablet", label: "Tablet" },
-  { value: "key", label: "Anahtar" },
-  { value: "card", label: "Kart" },
-  { value: "other", label: "Diğer" },
-] as const;
-
-const itemConditions = [
-  { value: "yeni", label: "Yeni" },
-  { value: "iyi", label: "İyi" },
-  { value: "orta", label: "Orta" },
-  { value: "kötü", label: "Kötü" },
-] as const;
 
 type FormData = z.infer<typeof inventoryItemSchema>;
 
@@ -79,11 +56,8 @@ export function InventorySection({ employee }: InventorySectionProps) {
     resolver: zodResolver(inventoryItemSchema),
     defaultValues: {
       name: "",
-      type: "",
-      condition: "yeni",
       notes: "",
       assignedTo: employee.id,
-      assignedAt: new Date().toISOString(),
     },
   });
 
@@ -106,7 +80,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/inventory?employeeId=${employee.id}`] });
       toast({
         title: "Başarılı",
         description: "Zimmetli eşya eklendi",
@@ -139,7 +113,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/inventory?employeeId=${employee.id}`] });
       toast({
         title: "Başarılı",
         description: "Zimmetli eşya güncellendi",
@@ -168,7 +142,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/inventory?employeeId=${employee.id}`] });
       toast({
         title: "Başarılı",
         description: "Zimmetli eşya silindi",
@@ -234,9 +208,9 @@ export function InventorySection({ employee }: InventorySectionProps) {
                 <div className="flex justify-between items-start">
                   <div>
                     <h4 className="font-medium">{item.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {itemTypes.find((t) => t.value === item.type)?.label}
-                    </p>
+                    {item.notes && (
+                      <p className="text-sm text-muted-foreground">{item.notes}</p>
+                    )}
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
@@ -246,11 +220,8 @@ export function InventorySection({ employee }: InventorySectionProps) {
                         setSelectedItem(item);
                         form.reset({
                           name: item.name,
-                          type: item.type,
-                          condition: item.condition as "yeni" | "iyi" | "orta" | "kötü",
                           notes: item.notes || "",
                           assignedTo: item.assignedTo,
-                          assignedAt: item.assignedAt?.toString(),
                         });
                         setIsOpen(true);
                       }}
@@ -269,29 +240,11 @@ export function InventorySection({ employee }: InventorySectionProps) {
                     </Button>
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">
-                    {format(new Date(item.assignedAt!), "d MMMM yyyy", {
-                      locale: tr,
-                    })}
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      item.condition === "yeni"
-                        ? "bg-green-100 text-green-800"
-                        : item.condition === "iyi"
-                        ? "bg-blue-100 text-blue-800"
-                        : item.condition === "orta"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {itemConditions.find((c) => c.value === item.condition)?.label}
-                  </span>
+                <div className="text-sm text-muted-foreground">
+                  {format(new Date(item.assignedAt!), "d MMMM yyyy", {
+                    locale: tr,
+                  })}
                 </div>
-                {item.notes && (
-                  <p className="text-sm text-muted-foreground">{item.notes}</p>
-                )}
               </div>
             ))
           )}
@@ -322,56 +275,6 @@ export function InventorySection({ employee }: InventorySectionProps) {
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Eşya Türü</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seçiniz" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {itemTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="condition"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Durumu</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seçiniz" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {itemConditions.map((condition) => (
-                          <SelectItem key={condition.value} value={condition.value}>
-                            {condition.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
