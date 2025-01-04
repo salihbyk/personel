@@ -799,7 +799,7 @@ export function registerRoutes(app: Express): Server {
             where: and(
               eq(dailyAchievements.employeeId, employee.id),
               gte(dailyAchievements.date, startDate.toISOString()),
-              lte(dailyAchievements.date, endDate.toISOString())
+              lte(dailyAchievements.date,endDate.toISOString())
             ),
             orderBy: (achievements, { asc }) => [asc(achievements.date)],
           });

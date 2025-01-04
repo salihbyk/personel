@@ -131,10 +131,17 @@ export default function PerformancePage() {
       return;
     }
 
-    const currentEmployeeId = parseInt(selectedEmployeeId);
+    if (!selectedEmployeeId) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen personel seçin.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     achievementMutation.mutate({
-      employeeId: currentEmployeeId,
+      employeeId: parseInt(selectedEmployeeId),
       date: format(selectedDate, 'yyyy-MM-dd'),
       type: achievementType,
       notes: notes.trim() || undefined,
