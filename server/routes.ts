@@ -157,30 +157,51 @@ export function registerRoutes(app: Express): Server {
           gte(leaves.startDate, startDate.toISOString()),
           lte(leaves.endDate, endDate.toISOString())
         ),
+        orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
       });
 
       // Excel dosyası oluştur
       const workbook = await XlsxPopulate.fromBlankAsync();
       const sheet = workbook.sheet(0);
 
+      // Stil tanımlamaları
+      const headerStyle = {
+        bold: true,
+        fontSize: 16,
+        horizontalAlignment: "center",
+        fontColor: "0000FF"
+      };
+
+      const subHeaderStyle = {
+        bold: true,
+        fontSize: 11,
+        fill: "F0F0F0"
+      };
+
+      const tableHeaderStyle = {
+        bold: true,
+        fill: "E0E0E0",
+        horizontalAlignment: "center",
+        border: true
+      };
+
       // Başlık
-      sheet.cell("A1").value("Personel İzin Raporu");
-      sheet.range("A1:E1").merged(true).style({ bold: true, horizontalAlignment: "center" });
+      sheet.cell("A1").value("Personel İzin Raporu").style(headerStyle);
+      sheet.range("A1:E1").merged(true);
 
       // Personel bilgileri
-      sheet.cell("A3").value("Personel Adı:");
+      sheet.cell("A3").value("Personel Adı:").style(subHeaderStyle);
       sheet.cell("B3").value(`${employee.firstName} ${employee.lastName}`);
-      sheet.cell("A4").value("Pozisyon:");
+      sheet.cell("A4").value("Pozisyon:").style(subHeaderStyle);
       sheet.cell("B4").value(employee.position || "-");
-      sheet.cell("A5").value("Dönem:");
+      sheet.cell("A5").value("Dönem:").style(subHeaderStyle);
       sheet.cell("B5").value(format(startDate, "MMMM yyyy", { locale: tr }));
 
-      // İzin detayları
-      sheet.cell("A7").value("Başlangıç");
-      sheet.cell("B7").value("Bitiş");
-      sheet.cell("C7").value("Süre (Gün)");
-      sheet.cell("D7").value("Not");
-      sheet.range("A7:D7").style({ bold: true, fill: "CCCCCC" });
+      // İzin detayları tablosu
+      sheet.cell("A7").value("Başlangıç").style(tableHeaderStyle);
+      sheet.cell("B7").value("Bitiş").style(tableHeaderStyle);
+      sheet.cell("C7").value("Süre (Gün)").style(tableHeaderStyle);
+      sheet.cell("D7").value("Not").style(tableHeaderStyle);
 
       let row = 8;
       let totalDays = 0;
@@ -191,22 +212,21 @@ export function registerRoutes(app: Express): Server {
         const days = differenceInDays(end, start) + 1;
         totalDays += days;
 
-        sheet.cell(`A${row}`).value(format(start, "dd.MM.yyyy"));
-        sheet.cell(`B${row}`).value(format(end, "dd.MM.yyyy"));
-        sheet.cell(`C${row}`).value(days);
-        sheet.cell(`D${row}`).value(leave.reason);
+        sheet.cell(`A${row}`).value(format(start, "dd.MM.yyyy")).style({ border: true });
+        sheet.cell(`B${row}`).value(format(end, "dd.MM.yyyy")).style({ border: true });
+        sheet.cell(`C${row}`).value(days).style({ border: true, horizontalAlignment: "center" });
+        sheet.cell(`D${row}`).value(leave.reason).style({ border: true });
         row++;
       });
 
       // Toplam
-      sheet.cell(`A${row + 1}`).value("Toplam İzin Günü:");
-      sheet.cell(`C${row + 1}`).value(totalDays);
-      sheet.range(`A${row + 1}:C${row + 1}`).style({ bold: true });
+      sheet.cell(`A${row + 1}`).value("Toplam İzin Günü:").style({ bold: true });
+      sheet.cell(`C${row + 1}`).value(totalDays).style({ bold: true, horizontalAlignment: "center" });
 
       // Otomatik sütun genişliği
       sheet.column("A").width(15);
       sheet.column("B").width(15);
-      sheet.column("C").width(10);
+      sheet.column("C").width(12);
       sheet.column("D").width(40);
 
       const buffer = await workbook.outputAsync();
@@ -248,6 +268,7 @@ export function registerRoutes(app: Express): Server {
           gte(leaves.startDate, startDate.toISOString()),
           lte(leaves.endDate, endDate.toISOString())
         ),
+        orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
       });
 
       // PDF dosyası oluştur
@@ -259,6 +280,10 @@ export function registerRoutes(app: Express): Server {
           left: 50,
           right: 50,
         },
+        info: {
+          Title: 'Personel İzin Raporu',
+          Author: 'İK Yönetim Sistemi',
+        }
       });
 
       // PDF akışını başlat
@@ -271,33 +296,71 @@ export function registerRoutes(app: Express): Server {
         res.send(result);
       });
 
-      // Başlık
-      doc.fontSize(20).text("Personel İzin Raporu", { align: "center" });
-      doc.moveDown();
+      // Türkçe karakter desteği için font ekle
+      doc.registerFont('Arial', 'Helvetica');
+
+      // Logo ve başlık
+      doc.fontSize(24)
+         .font('Arial')
+         .fillColor('#1e40af')
+         .text('Personel İzin Raporu', { align: 'center' });
+
+      doc.moveDown(2);
 
       // Personel bilgileri
-      doc.fontSize(12);
-      doc.text(`Personel: ${employee.firstName} ${employee.lastName}`);
-      doc.text(`Pozisyon: ${employee.position || "-"}`);
-      doc.text(`Dönem: ${format(startDate, "MMMM yyyy", { locale: tr })}`);
-      doc.moveDown();
+      doc.fontSize(12)
+         .font('Arial')
+         .fillColor('#374151');
+
+      const infoTable = {
+        headers: ['Personel', 'Pozisyon', 'Dönem'],
+        rows: [[
+          `${employee.firstName} ${employee.lastName}`,
+          employee.position || '-',
+          format(startDate, "MMMM yyyy", { locale: tr })
+        ]]
+      };
+
+      // Info table
+      const infoColumnWidth = 150;
+      const startY = doc.y;
+
+      // Headers
+      infoTable.headers.forEach((header, i) => {
+        doc.font('Arial-Bold')
+           .text(header, 50 + (i * infoColumnWidth), startY);
+      });
+
+      // Data
+      infoTable.rows[0].forEach((cell, i) => {
+        doc.font('Arial')
+           .text(cell, 50 + (i * infoColumnWidth), startY + 25);
+      });
+
+      doc.moveDown(3);
+
+      // İzin detayları tablosu
+      const tableTop = doc.y;
+      const columnWidth = 130;
 
       // Tablo başlıkları
-      const startX = 50;
-      let currentY = doc.y;
+      doc.font('Arial-Bold')
+         .fontSize(11)
+         .fillColor('#1e40af');
 
-      doc.font("Helvetica-Bold");
-      doc.text("Başlangıç", startX, currentY);
-      doc.text("Bitiş", startX + 100, currentY);
-      doc.text("Süre", startX + 200, currentY);
-      doc.text("Not", startX + 250, currentY);
+      ['Başlangıç', 'Bitiş', 'Süre', 'Not'].forEach((header, i) => {
+        doc.text(header, 50 + (i * columnWidth), tableTop);
+      });
 
       doc.moveDown();
-      currentY = doc.y;
 
-      // İzin detayları
+      // Tablo içeriği
+      let currentY = doc.y;
       let totalDays = 0;
-      doc.font("Helvetica");
+
+      doc.font('Arial')
+         .fontSize(10)
+         .fillColor('#374151');
 
       employeeLeaves.forEach((leave) => {
         const start = parseISO(leave.startDate);
@@ -305,17 +368,34 @@ export function registerRoutes(app: Express): Server {
         const days = differenceInDays(end, start) + 1;
         totalDays += days;
 
-        doc.text(format(start, "dd.MM.yyyy"), startX, currentY);
-        doc.text(format(end, "dd.MM.yyyy"), startX + 100, currentY);
-        doc.text(`${days} gün`, startX + 200, currentY);
-        doc.text(leave.reason || "-", startX + 250, currentY);
+        // Her satır için arka plan
+        doc.rect(45, currentY - 5, 500, 25)
+           .fill('#f8fafc');
 
-        currentY += 20;
+        doc.fillColor('#374151')
+           .text(format(start, "dd.MM.yyyy"), 50, currentY)
+           .text(format(end, "dd.MM.yyyy"), 50 + columnWidth, currentY)
+           .text(`${days} gün`, 50 + (2 * columnWidth), currentY)
+           .text(leave.reason || "-", 50 + (3 * columnWidth), currentY);
+
+        currentY += 30;
       });
 
-      doc.moveDown();
-      doc.font("Helvetica-Bold");
-      doc.text(`Toplam İzin Günü: ${totalDays} gün`);
+      // Toplam
+      doc.moveDown()
+         .font('Arial-Bold')
+         .text(`Toplam İzin Günü: ${totalDays} gün`, { underline: true });
+
+      // Footer
+      const bottomOfPage = doc.page.height - 50;
+      doc.fontSize(8)
+         .fillColor('#6b7280')
+         .text(
+           'Bu rapor otomatik olarak oluşturulmuştur.',
+           50,
+           bottomOfPage,
+           { align: 'center' }
+         );
 
       // PDF'i sonlandır
       doc.end();

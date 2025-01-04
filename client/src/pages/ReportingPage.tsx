@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet, FileText } from "lucide-react";
 import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -32,19 +32,33 @@ export default function ReportingPage() {
     queryKey: ["/api/leaves"],
   });
 
-  // Seçili ay için izin günlerini hesapla
-  const calculateMonthlyLeaves = (employeeId: number) => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-
+  // Belirli bir tarih aralığı için izinleri hesapla
+  const calculateLeaves = (employeeId: number, start: Date, end: Date) => {
     return leaves?.filter(leave => {
-      const startDate = parseISO(leave.startDate);
-      const endDate = parseISO(leave.endDate);
-      return leave.employeeId === employeeId && (
-        isWithinInterval(startDate, { start: monthStart, end: monthEnd }) ||
-        isWithinInterval(endDate, { start: monthStart, end: monthEnd })
+      const leaveStart = parseISO(leave.startDate);
+      const leaveEnd = parseISO(leave.endDate);
+      return (
+        leave.employeeId === employeeId &&
+        (isWithinInterval(leaveStart, { start, end }) ||
+         isWithinInterval(leaveEnd, { start, end }) ||
+         (leaveStart <= start && leaveEnd >= end))
       );
     }) || [];
+  };
+
+  // İzin günlerini hesapla
+  const calculateLeaveDays = (leaves: Leave[], start: Date, end: Date) => {
+    let totalDays = 0;
+    leaves.forEach(leave => {
+      const leaveStart = parseISO(leave.startDate);
+      const leaveEnd = parseISO(leave.endDate);
+
+      const effectiveStart = leaveStart < start ? start : leaveStart;
+      const effectiveEnd = leaveEnd > end ? end : leaveEnd;
+
+      totalDays += differenceInDays(effectiveEnd, effectiveStart) + 1;
+    });
+    return totalDays;
   };
 
   const generateExcelReport = async () => {
@@ -151,15 +165,15 @@ export default function ReportingPage() {
 
   return (
     <Layout employees={employees || []} isLoading={employeesLoading}>
-      <div className="p-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="container mx-auto p-4 lg:p-6 max-w-7xl space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm">
           <h1 className="text-2xl font-bold">İzin Raporları</h1>
           <div className="flex flex-wrap items-center gap-2">
             <Select
               value={selectedEmployeeId}
               onValueChange={setSelectedEmployeeId}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[200px] bg-white">
                 <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
@@ -176,7 +190,7 @@ export default function ReportingPage() {
                 <Button
                   variant="outline"
                   className={cn(
-                    "justify-start text-left font-normal",
+                    "justify-start text-left font-normal bg-white",
                     !currentDate && "text-muted-foreground"
                   )}
                 >
@@ -202,7 +216,7 @@ export default function ReportingPage() {
             <Button 
               variant="outline" 
               onClick={generateExcelReport} 
-              className="gap-2"
+              className="gap-2 bg-white hover:bg-green-50 text-green-600 border-green-200 hover:border-green-300"
               disabled={!selectedEmployeeId}
             >
               <FileSpreadsheet className="h-4 w-4" />
@@ -211,7 +225,7 @@ export default function ReportingPage() {
             <Button 
               variant="outline" 
               onClick={generatePdfReport} 
-              className="gap-2"
+              className="gap-2 bg-white hover:bg-red-50 text-red-600 border-red-200 hover:border-red-300"
               disabled={!selectedEmployeeId}
             >
               <FileText className="h-4 w-4" />
@@ -220,19 +234,17 @@ export default function ReportingPage() {
           </div>
         </div>
 
-        <Card>
+        <Card className="bg-white shadow-sm">
           <CardHeader>
             <CardTitle>Aylık İzin Raporu - {format(currentDate, "MMMM yyyy", { locale: tr })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               {filteredEmployees?.map((employee) => {
-                const monthlyLeaves = calculateMonthlyLeaves(employee.id);
-                const totalLeaveDays = monthlyLeaves.reduce((total, leave) => {
-                  const start = parseISO(leave.startDate);
-                  const end = parseISO(leave.endDate);
-                  return total + differenceInDays(end, start) + 1;
-                }, 0);
+                const monthStart = startOfMonth(currentDate);
+                const monthEnd = endOfMonth(currentDate);
+                const monthlyLeaves = calculateLeaves(employee.id, monthStart, monthEnd);
+                const totalDays = calculateLeaveDays(monthlyLeaves, monthStart, monthEnd);
 
                 return (
                   <div key={employee.id} className="space-y-2">
@@ -241,10 +253,10 @@ export default function ReportingPage() {
                         {employee.firstName} {employee.lastName}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Toplam İzin: {totalLeaveDays} gün
+                        Toplam İzin: {totalDays} gün
                       </div>
                     </div>
-                    <div className="grid grid-cols-31 gap-1">
+                    <div className="grid grid-cols-7 md:grid-cols-31 gap-1">
                       {daysInMonth.map((day) => {
                         const isLeaveDay = monthlyLeaves.some(leave => {
                           const startDate = parseISO(leave.startDate);
@@ -256,10 +268,10 @@ export default function ReportingPage() {
                           <div
                             key={day.toISOString()}
                             className={cn(
-                              "text-center text-xs p-1 rounded border-2",
+                              "text-center text-xs p-1 rounded-md border-2 transition-all hover:scale-105",
                               isLeaveDay
-                                ? "bg-red-50 border-red-300 text-red-700 font-medium"
-                                : "border-gray-200"
+                                ? "bg-gradient-to-br from-red-50 to-red-100 border-red-300 text-red-700 font-medium shadow-sm"
+                                : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                             )}
                           >
                             {format(day, "d")}
@@ -274,42 +286,40 @@ export default function ReportingPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white shadow-sm">
           <CardHeader>
             <CardTitle>Yıllık İzin Özeti - {currentDate.getFullYear()}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {filteredEmployees?.map((employee) => (
-                <div key={employee.id} className="space-y-2">
+                <div key={employee.id} className="space-y-4">
                   <div className="font-medium">
                     {employee.firstName} {employee.lastName}
                   </div>
-                  <div className="grid grid-cols-12 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
                     {Array.from({ length: 12 }, (_, i) => {
                       const monthDate = new Date(currentDate.getFullYear(), i, 1);
-                      const monthLeaves = calculateMonthlyLeaves(employee.id);
-                      const totalLeaveDays = monthLeaves.reduce((total, leave) => {
-                        const start = parseISO(leave.startDate);
-                        const end = parseISO(leave.endDate);
-                        return total + differenceInDays(end, start) + 1;
-                      }, 0);
+                      const monthStart = startOfMonth(monthDate);
+                      const monthEnd = endOfMonth(monthDate);
+                      const monthLeaves = calculateLeaves(employee.id, monthStart, monthEnd);
+                      const totalDays = calculateLeaveDays(monthLeaves, monthStart, monthEnd);
 
                       return (
                         <div
                           key={i}
                           className={cn(
-                            "p-2 text-center rounded border-2 text-sm",
-                            totalLeaveDays > 0
-                              ? "bg-red-50 border-red-300 text-red-700"
-                              : "border-gray-200"
+                            "p-2 text-center rounded-lg border-2 transition-all hover:scale-105",
+                            totalDays > 0
+                              ? "bg-gradient-to-br from-red-50 to-red-100 border-red-300 text-red-700 shadow-sm"
+                              : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                           )}
                         >
                           <div className="font-medium">
                             {format(monthDate, "MMM", { locale: tr })}
                           </div>
-                          <div className="text-xs">
-                            {totalLeaveDays} gün
+                          <div className="text-xs mt-1">
+                            {totalDays} gün
                           </div>
                         </div>
                       );
