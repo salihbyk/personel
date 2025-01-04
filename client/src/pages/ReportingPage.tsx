@@ -4,15 +4,25 @@ import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Employee, Leave } from "@db/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ReportingPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const { toast } = useToast();
 
   const { data: employees, isLoading: employeesLoading } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
@@ -37,24 +47,88 @@ export default function ReportingPage() {
     }) || [];
   };
 
-  // Gün izinli mi kontrolü
-  const isDayOnLeave = (date: Date, employeeId: number) => {
-    return leaves?.some(leave => {
-      if (leave.employeeId !== employeeId) return false;
-      const startDate = parseISO(leave.startDate);
-      const endDate = parseISO(leave.endDate);
-      return isWithinInterval(date, { start: startDate, end: endDate });
-    });
+  const generateExcelReport = async () => {
+    try {
+      if (!selectedEmployeeId) {
+        toast({
+          title: "Hata",
+          description: "Lütfen bir personel seçin",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(`/api/reports/excel?employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Rapor oluşturma hatası');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `izin-raporu-${format(currentDate, 'yyyy-MM')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Başarılı",
+        description: "Excel raporu indirildi",
+      });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Rapor oluşturulurken bir hata oluştu",
+        variant: "destructive",
+      });
+    }
   };
 
-  const generateExcelReport = () => {
-    // TODO: Excel rapor oluşturma
-    console.log("Excel rapor oluştur");
-  };
+  const generatePdfReport = async () => {
+    try {
+      if (!selectedEmployeeId) {
+        toast({
+          title: "Hata",
+          description: "Lütfen bir personel seçin",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  const generatePdfReport = () => {
-    // TODO: PDF rapor oluşturma
-    console.log("PDF rapor oluştur");
+      const response = await fetch(`/api/reports/pdf?employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Rapor oluşturma hatası');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `izin-raporu-${format(currentDate, 'yyyy-MM')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Başarılı",
+        description: "PDF raporu indirildi",
+      });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Rapor oluşturulurken bir hata oluştu",
+        variant: "destructive",
+      });
+    }
   };
 
   if (employeesLoading) {
@@ -71,18 +145,38 @@ export default function ReportingPage() {
     (_, i) => new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1)
   );
 
+  const filteredEmployees = selectedEmployeeId 
+    ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId)) 
+    : employees;
+
   return (
     <Layout employees={employees || []} isLoading={employeesLoading}>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">İzin Raporları</h1>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={selectedEmployeeId}
+              onValueChange={setSelectedEmployeeId}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Personel Seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees?.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id.toString()}>
+                    {employee.firstName} {employee.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "justify-start text-left font-normal border-2 border-blue-300",
+                    "justify-start text-left font-normal",
                     !currentDate && "text-muted-foreground"
                   )}
                 >
@@ -105,11 +199,21 @@ export default function ReportingPage() {
               </PopoverContent>
             </Popover>
 
-            <Button variant="outline" onClick={generateExcelReport} className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={generateExcelReport} 
+              className="gap-2"
+              disabled={!selectedEmployeeId}
+            >
               <FileSpreadsheet className="h-4 w-4" />
               Excel
             </Button>
-            <Button variant="outline" onClick={generatePdfReport} className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={generatePdfReport} 
+              className="gap-2"
+              disabled={!selectedEmployeeId}
+            >
               <FileText className="h-4 w-4" />
               PDF
             </Button>
@@ -122,7 +226,7 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {employees?.map((employee) => {
+              {filteredEmployees?.map((employee) => {
                 const monthlyLeaves = calculateMonthlyLeaves(employee.id);
                 const totalLeaveDays = monthlyLeaves.reduce((total, leave) => {
                   const start = parseISO(leave.startDate);
@@ -141,19 +245,27 @@ export default function ReportingPage() {
                       </div>
                     </div>
                     <div className="grid grid-cols-31 gap-1">
-                      {daysInMonth.map((day) => (
-                        <div
-                          key={day.toISOString()}
-                          className={cn(
-                            "text-center text-xs p-1 rounded border",
-                            isDayOnLeave(day, employee.id)
-                              ? "bg-red-50 border-red-200 text-red-700"
-                              : "border-gray-200"
-                          )}
-                        >
-                          {format(day, "d")}
-                        </div>
-                      ))}
+                      {daysInMonth.map((day) => {
+                        const isLeaveDay = monthlyLeaves.some(leave => {
+                          const startDate = parseISO(leave.startDate);
+                          const endDate = parseISO(leave.endDate);
+                          return isWithinInterval(day, { start: startDate, end: endDate });
+                        });
+
+                        return (
+                          <div
+                            key={day.toISOString()}
+                            className={cn(
+                              "text-center text-xs p-1 rounded border-2",
+                              isLeaveDay
+                                ? "bg-red-50 border-red-300 text-red-700 font-medium"
+                                : "border-gray-200"
+                            )}
+                          >
+                            {format(day, "d")}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -168,7 +280,7 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {employees?.map((employee) => (
+              {filteredEmployees?.map((employee) => (
                 <div key={employee.id} className="space-y-2">
                   <div className="font-medium">
                     {employee.firstName} {employee.lastName}
@@ -176,8 +288,8 @@ export default function ReportingPage() {
                   <div className="grid grid-cols-12 gap-2">
                     {Array.from({ length: 12 }, (_, i) => {
                       const monthDate = new Date(currentDate.getFullYear(), i, 1);
-                      const monthlyLeaves = calculateMonthlyLeaves(employee.id);
-                      const totalLeaveDays = monthlyLeaves.reduce((total, leave) => {
+                      const monthLeaves = calculateMonthlyLeaves(employee.id);
+                      const totalLeaveDays = monthLeaves.reduce((total, leave) => {
                         const start = parseISO(leave.startDate);
                         const end = parseISO(leave.endDate);
                         return total + differenceInDays(end, start) + 1;
@@ -187,9 +299,9 @@ export default function ReportingPage() {
                         <div
                           key={i}
                           className={cn(
-                            "p-2 text-center rounded border text-sm",
+                            "p-2 text-center rounded border-2 text-sm",
                             totalLeaveDays > 0
-                              ? "bg-red-50 border-red-200 text-red-700"
+                              ? "bg-red-50 border-red-300 text-red-700"
                               : "border-gray-200"
                           )}
                         >
