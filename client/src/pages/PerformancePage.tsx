@@ -46,20 +46,14 @@ export default function PerformancePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: employees, isLoading: employeesLoading, error: employeesError } = useQuery<Employee[]>({
+  const { data: employees = [], isLoading: employeesLoading, error: employeesError } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
-    retry: false,
-    onError: (error: Error) => {
-      logger.error("Failed to fetch employees", error, { endpoint: "/api/employees" });
-    }
+    retry: false
   });
 
-  const { data: achievements, error: achievementsError } = useQuery<DailyAchievement[]>({
+  const { data: achievements = [], error: achievementsError } = useQuery<DailyAchievement[]>({
     queryKey: ["/api/achievements"],
-    retry: false,
-    onError: (error: Error) => {
-      logger.error("Failed to fetch achievements", error, { endpoint: "/api/achievements" });
-    }
+    retry: false
   });
 
   const deleteAchievementMutation = useMutation({
@@ -164,9 +158,15 @@ export default function PerformancePage() {
     );
   }
 
-  const calculateAchievements = (employeeId: number, start: Date, end: Date) => {
-    if (!achievements) return [];
+  if (employeesLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
+  const calculateAchievements = (employeeId: number, start: Date, end: Date) => {
     return achievements.filter(achievement => {
       const achievementDate = parseISO(achievement.date);
       return (
@@ -202,14 +202,6 @@ export default function PerformancePage() {
     }
   };
 
-  if (employeesLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
   const daysInMonth = Array.from(
     { length: endOfMonth(currentDate).getDate() },
     (_, i) => new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1)
@@ -217,7 +209,7 @@ export default function PerformancePage() {
 
   const filteredEmployees = selectedEmployeeId === "all"
     ? employees
-    : employees?.filter(emp => emp.id === parseInt(selectedEmployeeId));
+    : employees.filter(emp => emp.id === parseInt(selectedEmployeeId));
 
   const getAchievementIcon = (type: string) => {
     switch (type) {
@@ -262,67 +254,75 @@ export default function PerformancePage() {
   const topPerformers = calculateTopPerformers();
 
   return (
-    <Layout employees={employees || []} isLoading={employeesLoading}>
+    <Layout employees={employees} isLoading={employeesLoading}>
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl space-y-6">
         {/* Performans Özeti Widget'ları */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {topPerformers && (
             <>
-              <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+              <Card className="bg-gradient-to-br from-yellow-50 via-yellow-100 to-amber-50 border-yellow-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Star className="h-5 w-5 text-yellow-500" />
-                    En Başarılı Personel
+                    <span className="bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
+                      En Başarılı Personel
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="font-medium">{topPerformers.topStar.firstName} {topPerformers.topStar.lastName}</div>
-                  <div className="text-sm text-muted-foreground">{topPerformers.topStar.stars} yıldız</div>
+                  <div className="font-medium text-lg">{topPerformers.topStar.firstName} {topPerformers.topStar.lastName}</div>
+                  <div className="text-sm text-yellow-600/80">{topPerformers.topStar.stars} yıldız</div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <Card className="bg-gradient-to-br from-blue-50 via-blue-100 to-cyan-50 border-blue-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ChefHat className="h-5 w-5 text-blue-500" />
-                    En Başarılı Şef
+                    <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                      En Başarılı Şef
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="font-medium">{topPerformers.topChef.firstName} {topPerformers.topChef.lastName}</div>
-                  <div className="text-sm text-muted-foreground">{topPerformers.topChef.chefs} şef rozeti</div>
+                  <div className="font-medium text-lg">{topPerformers.topChef.firstName} {topPerformers.topChef.lastName}</div>
+                  <div className="text-sm text-blue-600/80">{topPerformers.topChef.chefs} şef rozeti</div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+              <Card className="bg-gradient-to-br from-red-50 via-red-100 to-rose-50 border-red-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <X className="h-5 w-5 text-red-500" />
-                    En Çok Zarar Kaydı
+                    <span className="bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                      En Çok Zarar Kaydı
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="font-medium">{topPerformers.mostDamage.firstName} {topPerformers.mostDamage.lastName}</div>
-                  <div className="text-sm text-muted-foreground">{topPerformers.mostDamage.damages} zarar</div>
+                  <div className="font-medium text-lg">{topPerformers.mostDamage.firstName} {topPerformers.mostDamage.lastName}</div>
+                  <div className="text-sm text-red-600/80">{topPerformers.mostDamage.damages} zarar</div>
                 </CardContent>
               </Card>
             </>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm">
-          <h1 className="text-2xl font-bold">Performans Değerlendirme</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+            Performans Değerlendirme
+          </h1>
           <div className="flex flex-wrap items-center gap-2">
             <Select
               value={selectedEmployeeId}
               onValueChange={setSelectedEmployeeId}
             >
-              <SelectTrigger className="w-[200px] bg-white">
+              <SelectTrigger className="w-[200px] bg-white hover:bg-gray-50 transition-colors">
                 <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Personeller</SelectItem>
-                {employees?.map((employee) => (
+                {employees.map((employee) => (
                   <SelectItem key={employee.id} value={employee.id.toString()}>
                     {employee.firstName} {employee.lastName}
                   </SelectItem>
@@ -335,7 +335,7 @@ export default function PerformancePage() {
                 <Button
                   variant="outline"
                   className={cn(
-                    "justify-start text-left font-normal bg-white",
+                    "justify-start text-left font-normal bg-white hover:bg-gray-50 transition-colors",
                     !currentDate && "text-muted-foreground"
                   )}
                 >
@@ -360,7 +360,7 @@ export default function PerformancePage() {
 
             <Button
               variant="outline"
-              className="bg-white gap-2"
+              className="bg-white hover:bg-gray-50 transition-colors gap-2"
               onClick={() => {
                 if (!currentDate) {
                   toast({
@@ -381,13 +381,13 @@ export default function PerformancePage() {
           </div>
         </div>
 
-        <Card className="bg-white shadow-sm">
+        <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle>Aylık Performans - {format(currentDate, "MMMM yyyy", { locale: tr })}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {filteredEmployees?.map((employee) => {
+            <div className="space-y-8">
+              {filteredEmployees.map((employee) => {
                 const monthStart = startOfMonth(currentDate);
                 const monthEnd = endOfMonth(currentDate);
                 const monthlyAchievements = calculateAchievements(employee.id, monthStart, monthEnd);
@@ -399,23 +399,23 @@ export default function PerformancePage() {
                 };
 
                 return (
-                  <div key={employee.id} className="space-y-2">
+                  <div key={employee.id} className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="font-medium">
+                      <div className="font-medium text-lg">
                         {employee.firstName} {employee.lastName}
                       </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-4">
+                      <div className="flex items-center gap-6">
                         <span className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-yellow-500" />
-                          {stats.STAR}
+                          <span className="font-medium">{stats.STAR}</span>
                         </span>
                         <span className="flex items-center gap-1">
                           <ChefHat className="h-4 w-4 text-blue-500" />
-                          {stats.CHEF}
+                          <span className="font-medium">{stats.CHEF}</span>
                         </span>
                         <span className="flex items-center gap-1">
                           <X className="h-4 w-4 text-red-500" />
-                          {stats.X}
+                          <span className="font-medium">{stats.X}</span>
                         </span>
                       </div>
                     </div>
@@ -432,7 +432,7 @@ export default function PerformancePage() {
                             className={cn(
                               "text-center p-1 rounded-md border-2 transition-all hover:scale-105 h-auto flex-col items-center justify-center group relative",
                               dayAchievement
-                                ? "bg-gradient-to-br border-gray-300 shadow-sm"
+                                ? "bg-gradient-to-br border-gray-300 shadow-sm hover:shadow-md"
                                 : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                             )}
                             onClick={() => {
@@ -441,7 +441,7 @@ export default function PerformancePage() {
                               setNotes("");
                             }}
                           >
-                            <div className="text-xs">{format(day, "d")}</div>
+                            <div className="text-xs font-medium">{format(day, "d")}</div>
                             {dayAchievement && (
                               <>
                                 <div className="mt-1">
@@ -450,7 +450,7 @@ export default function PerformancePage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeleteAchievement(dayAchievement.id);
@@ -471,15 +471,15 @@ export default function PerformancePage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white shadow-sm">
+        <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle>Yıllık Performans Özeti - {currentDate.getFullYear()}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {filteredEmployees?.map((employee) => (
+            <div className="space-y-8">
+              {filteredEmployees.map((employee) => (
                 <div key={employee.id} className="space-y-4">
-                  <div className="font-medium">
+                  <div className="font-medium text-lg">
                     {employee.firstName} {employee.lastName}
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
@@ -501,9 +501,9 @@ export default function PerformancePage() {
                         <div
                           key={i}
                           className={cn(
-                            "p-2 text-center rounded-lg border-2 transition-all hover:scale-105",
+                            "p-2 text-center rounded-lg border-2 transition-all hover:scale-105 hover:shadow-md",
                             hasAchievements
-                              ? "bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200 shadow-sm"
+                              ? "bg-gradient-to-br from-blue-50 via-purple-50 to-blue-50 border-blue-200"
                               : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                           )}
                         >
@@ -513,15 +513,15 @@ export default function PerformancePage() {
                           <div className="flex flex-col gap-1 mt-2">
                             <div className="flex items-center justify-center gap-1 text-xs">
                               <Star className="h-3 w-3 text-yellow-500" />
-                              <span>{monthStats.STAR}</span>
+                              <span className="font-medium">{monthStats.STAR}</span>
                             </div>
                             <div className="flex items-center justify-center gap-1 text-xs">
                               <ChefHat className="h-3 w-3 text-blue-500" />
-                              <span>{monthStats.CHEF}</span>
+                              <span className="font-medium">{monthStats.CHEF}</span>
                             </div>
                             <div className="flex items-center justify-center gap-1 text-xs">
                               <X className="h-3 w-3 text-red-500" />
-                              <span>{monthStats.X}</span>
+                              <span className="font-medium">{monthStats.X}</span>
                             </div>
                           </div>
                         </div>
@@ -541,7 +541,7 @@ export default function PerformancePage() {
           setNotes("");
         }
       }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Performans Değerlendirmesi</DialogTitle>
             <DialogDescription>
@@ -602,6 +602,7 @@ export default function PerformancePage() {
             </Button>
             <Button
               onClick={handleSaveAchievement}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
             >
               {achievementMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>
