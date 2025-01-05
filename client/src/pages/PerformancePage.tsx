@@ -426,20 +426,19 @@ export default function PerformancePage() {
                         );
 
                         return (
-                          <Button
+                          <div
                             key={day.toISOString()}
-                            variant="ghost"
-                            className={cn(
-                              "text-center p-1 rounded-md border-2 transition-all hover:scale-105 h-auto flex-col items-center justify-center group relative",
-                              dayAchievement
-                                ? "bg-gradient-to-br border-gray-300 shadow-sm hover:shadow-md"
-                                : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
-                            )}
                             onClick={() => {
                               setSelectedDate(day);
                               setSelectedEmployeeId(employee.id.toString());
                               setNotes("");
                             }}
+                            className={cn(
+                              "text-center p-1 rounded-md border-2 transition-all hover:scale-105 h-auto flex flex-col items-center justify-center group relative cursor-pointer",
+                              dayAchievement
+                                ? "bg-gradient-to-br border-gray-300 shadow-sm hover:shadow-md"
+                                : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
+                            )}
                           >
                             <div className="text-xs font-medium">{format(day, "d")}</div>
                             {dayAchievement && (
@@ -460,7 +459,7 @@ export default function PerformancePage() {
                                 </Button>
                               </>
                             )}
-                          </Button>
+                          </div>
                         );
                       })}
                     </div>
@@ -533,82 +532,82 @@ export default function PerformancePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <Dialog open={!!selectedDate} onOpenChange={(open) => {
-        if (!open) {
-          setSelectedDate(null);
-          setNotes("");
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Performans Değerlendirmesi</DialogTitle>
-            <DialogDescription>
-              {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: tr })} tarihli değerlendirme
-            </DialogDescription>
-          </DialogHeader>
+        <Dialog open={!!selectedDate} onOpenChange={(open) => {
+          if (!open) {
+            setSelectedDate(null);
+            setNotes("");
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Performans Değerlendirmesi</DialogTitle>
+              <DialogDescription>
+                {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: tr })} tarihli değerlendirme
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            <RadioGroup
-              value={achievementType}
-              onValueChange={(value) => setAchievementType(value as 'STAR' | 'CHEF' | 'X')}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="STAR" id="star" />
-                <Label htmlFor="star" className="flex items-center gap-1 cursor-pointer">
-                  <Star className="h-4 w-4 text-yellow-500" />
-                  Yıldız
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="CHEF" id="chef" />
-                <Label htmlFor="chef" className="flex items-center gap-1 cursor-pointer">
-                  <ChefHat className="h-4 w-4 text-blue-500" />
-                  Şef
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="X" id="x" />
-                <Label htmlFor="x" className="flex items-center gap-1 cursor-pointer">
-                  <X className="h-4 w-4 text-red-500" />
-                  Zarar
-                </Label>
-              </div>
-            </RadioGroup>
+            <div className="space-y-6 py-4">
+              <RadioGroup
+                value={achievementType}
+                onValueChange={(value) => setAchievementType(value as 'STAR' | 'CHEF' | 'X')}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="STAR" id="star" />
+                  <Label htmlFor="star" className="flex items-center gap-1 cursor-pointer">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    Yıldız
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="CHEF" id="chef" />
+                  <Label htmlFor="chef" className="flex items-center gap-1 cursor-pointer">
+                    <ChefHat className="h-4 w-4 text-blue-500" />
+                    Şef
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="X" id="x" />
+                  <Label htmlFor="x" className="flex items-center gap-1 cursor-pointer">
+                    <X className="h-4 w-4 text-red-500" />
+                    Zarar
+                  </Label>
+                </div>
+              </RadioGroup>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notlar (Opsiyonel)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Değerlendirme ile ilgili notlarınızı buraya yazabilirsiniz..."
-                className="min-h-[100px]"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notlar (Opsiyonel)</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Değerlendirme ile ilgili notlarınızı buraya yazabilirsiniz..."
+                  className="min-h-[100px]"
+                />
+              </div>
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedDate(null);
-                setNotes("");
-              }}
-            >
-              İptal
-            </Button>
-            <Button
-              onClick={handleSaveAchievement}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            >
-              {achievementMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedDate(null);
+                  setNotes("");
+                }}
+              >
+                İptal
+              </Button>
+              <Button
+                onClick={handleSaveAchievement}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
+                {achievementMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </Layout>
   );
 }

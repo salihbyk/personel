@@ -1,0 +1,55 @@
+Warning: validateDOMNesting(...): <button> cannot appear as a descendant of &lt;button&gt;.
+    at button
+    at _c (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/button.tsx:47:11)
+    at button
+    at _c (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/button.tsx:47:11)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/card.tsx:106:12)
+    at div
+    at _c (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at main
+    at div
+    at div
+    at Layout (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/Layout.tsx:39:26)
+    at PerformancePage (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/pages/PerformancePage.tsx:51:41)
+    at Route (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/wouter.js?v=ddf8c2c0:323:16)
+    at Switch (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/wouter.js?v=ddf8c2c0:379:17)
+    at div
+    at AppContent (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/App.tsx:31:37)
+    at QueryClientProvider (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/@tanstack_react-query.js?v=ddf8c2c0:2827:3)
+    at App
+    at QueryClientProvider (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/@tanstack_react-query.js?v=ddf8c2c0:2827:3)
+at button
+at _c (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/button.tsx:47:11)
+at button
+at _c (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/button.tsx:47:11)
+at div
+at div
+at div
+at div
+at _c9 (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/card.tsx:106:12)
+at div
+at _c (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/ui/card.tsx:20:11)
+at div
+at div
+at main
+at div
+at div
+at Layout (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/components/Layout.tsx:39:26)
+at PerformancePage (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/pages/PerformancePage.tsx:51:41)
+at Route (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/wouter.js?v=ddf8c2c0:323:16)
+at Switch (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/wouter.js?v=ddf8c2c0:379:17)
+at div
+at AppContent (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/src/App.tsx:31:37)
+at QueryClientProvider (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/@tanstack_react-query.js?v=ddf8c2c0:2827:3)
+at App
+at QueryClientProvider (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/@fs/home/runner/PersonnelPro/node_modules/.vite/deps/@tanstack_react-query.js?v=ddf8c2c0:2827:3)
+at t.value (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://6ed2e18b-5371-49e4-9254-1c83ae239df5-00-22c6c7t1ckqdu.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
