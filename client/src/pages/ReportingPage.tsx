@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, FileSpreadsheet, FileText } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet } from "lucide-react";
 import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -33,12 +33,12 @@ export default function ReportingPage() {
   });
 
   // Belirli bir tarih aralığı için izinleri hesapla
-  const calculateLeaves = (employeeId: number, start: Date, end: Date) => {
+  const calculateLeaves = (employeeId: number | null, start: Date, end: Date) => {
     return leaves?.filter(leave => {
       const leaveStart = parseISO(leave.startDate);
       const leaveEnd = parseISO(leave.endDate);
       return (
-        leave.employeeId === employeeId &&
+        (employeeId === null || leave.employeeId === employeeId) &&
         (isWithinInterval(leaveStart, { start, end }) ||
          isWithinInterval(leaveEnd, { start, end }) ||
          (leaveStart <= start && leaveEnd >= end))
@@ -63,16 +63,11 @@ export default function ReportingPage() {
 
   const generateExcelReport = async () => {
     try {
-      if (!selectedEmployeeId) {
-        toast({
-          title: "Hata",
-          description: "Lütfen bir personel seçin",
-          variant: "destructive",
-        });
-        return;
-      }
+      const queryParams = selectedEmployeeId === "all" 
+        ? `date=${format(currentDate, 'yyyy-MM')}` 
+        : `employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`;
 
-      const response = await fetch(`/api/reports/excel?employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`, {
+      const response = await fetch(`/api/reports/excel?${queryParams}`, {
         method: 'GET',
       });
 
@@ -103,48 +98,6 @@ export default function ReportingPage() {
     }
   };
 
-  const generatePdfReport = async () => {
-    try {
-      if (!selectedEmployeeId) {
-        toast({
-          title: "Hata",
-          description: "Lütfen bir personel seçin",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const response = await fetch(`/api/reports/pdf?employeeId=${selectedEmployeeId}&date=${format(currentDate, 'yyyy-MM')}`, {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        throw new Error('Rapor oluşturma hatası');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `izin-raporu-${format(currentDate, 'yyyy-MM')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: "Başarılı",
-        description: "PDF raporu indirildi",
-      });
-    } catch (error) {
-      toast({
-        title: "Hata",
-        description: "Rapor oluşturulurken bir hata oluştu",
-        variant: "destructive",
-      });
-    }
-  };
-
   if (employeesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -159,9 +112,11 @@ export default function ReportingPage() {
     (_, i) => new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1)
   );
 
-  const filteredEmployees = selectedEmployeeId 
-    ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId)) 
-    : employees;
+  const filteredEmployees = selectedEmployeeId === "all" 
+    ? employees 
+    : selectedEmployeeId 
+      ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId))
+      : employees;
 
   return (
     <Layout employees={employees || []} isLoading={employeesLoading}>
@@ -177,6 +132,7 @@ export default function ReportingPage() {
                 <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Tüm Personeller</SelectItem>
                 {employees?.map((employee) => (
                   <SelectItem key={employee.id} value={employee.id.toString()}>
                     {employee.firstName} {employee.lastName}
@@ -221,15 +177,6 @@ export default function ReportingPage() {
             >
               <FileSpreadsheet className="h-4 w-4" />
               Excel
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={generatePdfReport} 
-              className="gap-2 bg-white hover:bg-red-50 text-red-600 border-red-200 hover:border-red-300"
-              disabled={!selectedEmployeeId}
-            >
-              <FileText className="h-4 w-4" />
-              PDF
             </Button>
           </div>
         </div>
