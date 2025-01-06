@@ -63,21 +63,22 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Passport stratejisi
+  // Passport stratejisi - sadece şifre kontrolü
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        // Her zaman admin kullanıcısını kontrol et
         const user = await db.query.users.findFirst({
-          where: eq(users.username, username),
+          where: eq(users.username, "admin"),
         });
 
         if (!user) {
-          return done(null, false, { message: "Hatalı kullanıcı adı veya şifre." });
+          return done(null, false, { message: "Hatalı şifre." });
         }
 
         const isMatch = await crypto.compare(password, user.password);
         if (!isMatch) {
-          return done(null, false, { message: "Hatalı kullanıcı adı veya şifre." });
+          return done(null, false, { message: "Hatalı şifre." });
         }
 
         return done(null, user);
@@ -126,7 +127,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Login endpoint
+  // Login endpoint - sadece şifre kontrolü
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: Express.User, info: IVerifyOptions) => {
       if (err) {

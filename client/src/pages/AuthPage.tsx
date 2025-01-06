@@ -17,7 +17,6 @@ import { UserCircle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Kullanıcı adı gerekli"),
   password: z.string().min(1, "Şifre gerekli"),
 });
 
@@ -30,7 +29,6 @@ export default function AuthPage() {
   const form = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
       password: "",
     },
   });
@@ -40,7 +38,7 @@ export default function AuthPage() {
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, username: "admin" }), // Backend için sabit username
         credentials: "include",
       });
 
@@ -95,23 +93,6 @@ export default function AuthPage() {
               onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))}
               className="space-y-4"
             >
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Kullanıcı adı"
-                        className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/20"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-300" />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="password"
