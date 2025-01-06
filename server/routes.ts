@@ -122,13 +122,29 @@ export function registerRoutes(app: Express): Server {
 
   app.delete("/api/employees/:id", async (req, res) => {
     try {
-      await db
+      const employeeId = parseInt(req.params.id);
+      
+      // Önce bağlı kayıtları sil
+      await db.delete(leaves).where(eq(leaves.employeeId, employeeId));
+      await db.delete(dailyAchievements).where(eq(dailyAchievements.employeeId, employeeId));
+      await db.update(inventoryItems)
+        .set({ assignedTo: null, assignedAt: null })
+        .where(eq(inventoryItems.assignedTo, employeeId));
+      
+      // Sonra personeli sil
+      const result = await db
         .delete(employees)
-        .where(eq(employees.id, parseInt(req.params.id)))
+        .where(eq(employees.id, employeeId))
         .returning();
-      res.json({ message: "Personel silindi" });
+
+      if (result.length === 0) {
+        return res.status(404).send("Personel bulunamadı");
+      }
+
+      res.json({ message: "Personel silindi", employee: result[0] });
     } catch (error: any) {
-      res.status(400).send("Personel silinemedi: " + error.message);
+      console.error("Personel silme hatası:", error);
+      res.status(500).send("Personel silinemedi: " + error.message);
     }
   });
 
