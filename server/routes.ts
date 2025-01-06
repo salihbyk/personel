@@ -52,7 +52,6 @@ import { db } from "@db";
 import { employees, leaves, inventoryItems, dailyAchievements } from "@db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import XlsxPopulate from "xlsx-populate";
-//import PDFDocument from "pdfkit"; // Removed PDFDocument import
 import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { SQL } from "drizzle-orm";
@@ -292,6 +291,7 @@ export function registerRoutes(app: Express): Server {
     }
   };
 
+  // Excel rapor oluşturma
   app.get("/api/reports/excel", async (req, res) => {
     try {
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
@@ -318,7 +318,7 @@ export function registerRoutes(app: Express): Server {
           return res.status(404).send("Personel bulunamadı");
         }
 
-        const leaves = await db.query.leaves.findMany({
+        const employeeLeaves = await db.query.leaves.findMany({
           where: and(
             eq(leaves.employeeId, employeeId),
             gte(leaves.startDate, startDate.toISOString()),
@@ -356,7 +356,7 @@ export function registerRoutes(app: Express): Server {
         let row = 10;
         let totalDays = 0;
 
-        leaves.forEach((leave) => {
+        employeeLeaves.forEach((leave) => {
           const start = parseISO(leave.startDate);
           const end = parseISO(leave.endDate);
           const days = differenceInDays(end, start) + 1;
@@ -401,7 +401,7 @@ export function registerRoutes(app: Express): Server {
 
         // Her personel için izinleri listele
         for (const employee of allEmployees) {
-          const leaves = await db.query.leaves.findMany({
+          const employeeLeaves = await db.query.leaves.findMany({
             where: and(
               eq(leaves.employeeId, employee.id),
               gte(leaves.startDate, startDate.toISOString()),
@@ -410,8 +410,8 @@ export function registerRoutes(app: Express): Server {
             orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
           });
 
-          if (leaves.length > 0) {
-            leaves.forEach((leave) => {
+          if (employeeLeaves.length > 0) {
+            employeeLeaves.forEach((leave) => {
               const start = parseISO(leave.startDate);
               const end = parseISO(leave.endDate);
               const days = differenceInDays(end, start) + 1;
@@ -603,7 +603,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Fix the achievements Excel report section
-  app.get("/api/achievements/excel", async (req, res) => {
+    app.get("/api/achievements/excel", async (req, res) => {
     try {
       const date = req.query.date as string;
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
@@ -795,7 +795,7 @@ export function registerRoutes(app: Express): Server {
           });
 
           const stats = {
-            STAR: achievements.filter(a => a.type === 'STAR').length,
+            STAR: achievements.filter(a => a.type ==='STAR').length,
             CHEF: achievements.filter(a => a.type === 'CHEF').length,
             X: achievements.filter(a => a.type === 'X').length,
           };
