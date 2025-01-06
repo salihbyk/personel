@@ -831,7 +831,7 @@ export function registerRoutes(app: Express): Server {
             'CHEF': 'Şef',
             'X': 'Zarar'
           }[achievement.type]).style({ border: true });
-          sheet.cell`C${row}`).value(achievement.notes || "-").style({ border: true });
+          sheet.cell(`C${row}`).value(achievement.notes || "-").style({ border: true });
           row++;
         });
 
