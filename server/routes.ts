@@ -52,7 +52,7 @@ import { db } from "@db";
 import { employees, leaves, inventoryItems, dailyAchievements } from "@db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import XlsxPopulate from "xlsx-populate";
-import PDFDocument from "pdfkit";
+//import PDFDocument from "pdfkit"; // Removed PDFDocument import
 import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { SQL } from "drizzle-orm";
@@ -230,165 +230,216 @@ export function registerRoutes(app: Express): Server {
     }
   });
   // Raporlama API'leri
+  // Header stili ve tablo tasarımı için stil tanımlamaları
+  const headerStyle = {
+    bold: true,
+    fontSize: 16,
+    horizontalAlignment: "center",
+    fontColor: "0000FF",
+    fill: {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: "F8F9FA"
+    },
+    border: {
+      top: { style: "thin", color: "E9ECEF" },
+      bottom: { style: "thin", color: "E9ECEF" },
+      left: { style: "thin", color: "E9ECEF" },
+      right: { style: "thin", color: "E9ECEF" }
+    }
+  };
+
+  const subHeaderStyle = {
+    bold: true,
+    fontSize: 11,
+    fill: {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: "F8F9FA"
+    },
+    border: {
+      top: { style: "thin", color: "E9ECEF" },
+      bottom: { style: "thin", color: "E9ECEF" },
+      left: { style: "thin", color: "E9ECEF" },
+      right: { style: "thin", color: "E9ECEF" }
+    }
+  };
+
+  const tableHeaderStyle = {
+    bold: true,
+    fontSize: 10,
+    horizontalAlignment: "center",
+    fill: {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: "F1F3F5"
+    },
+    border: {
+      top: { style: "thin", color: "DEE2E6" },
+      bottom: { style: "thin", color: "DEE2E6" },
+      left: { style: "thin", color: "DEE2E6" },
+      right: { style: "thin", color: "DEE2E6" }
+    }
+  };
+
+  const cellStyle = {
+    fontSize: 10,
+    border: {
+      top: { style: "thin", color: "E9ECEF" },
+      bottom: { style: "thin", color: "E9ECEF" },
+      left: { style: "thin", color: "E9ECEF" },
+      right: { style: "thin", color: "E9ECEF" }
+    }
+  };
+
   app.get("/api/reports/excel", async (req, res) => {
     try {
-      const employeeId = parseInt(req.query.employeeId as string);
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
       const date = req.query.date as string;
 
-      if (!employeeId || !date) {
-        return res.status(400).send("Personel ID ve tarih zorunludur");
+      if (!date) {
+        return res.status(400).send("Tarih zorunludur");
       }
 
       const [year, month] = date.split("-").map(Number);
       const startDate = startOfMonth(new Date(year, month - 1));
       const endDate = endOfMonth(new Date(year, month - 1));
 
-      const employee = await db.query.employees.findFirst({
-        where: eq(employees.id, employeeId),
-      });
-
-      if (!employee) {
-        return res.status(404).send("Personel bulunamadı");
-      }
-
-      // Tüm yıl için izinleri al
-      const yearStart = new Date(year, 0, 1);
-      const yearEnd = new Date(year, 11, 31);
-
-      const employeeLeaves = await db.query.leaves.findMany({
-        where: and(
-          eq(leaves.employeeId, employeeId),
-          gte(leaves.startDate, yearStart.toISOString()),
-          lte(leaves.endDate, yearEnd.toISOString())
-        ),
-        orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
-      });
-
-      // Excel dosyası oluştur
       const workbook = await XlsxPopulate.fromBlankAsync();
       const sheet = workbook.sheet(0);
 
-      // Stil tanımlamaları
-      const headerStyle = {
-        bold: true,
-        fontSize: 16,
-        horizontalAlignment: "center",
-        fontColor: "0000FF"
-      };
+      if (employeeId) {
+        // Tek personel detaylı raporu
+        const employee = await db.query.employees.findFirst({
+          where: eq(employees.id, employeeId),
+        });
 
-      const subHeaderStyle = {
-        bold: true,
-        fontSize: 11,
-        fill: "F0F0F0"
-      };
+        if (!employee) {
+          return res.status(404).send("Personel bulunamadı");
+        }
 
-      const tableHeaderStyle = {
-        bold: true,
-        fill: "E0E0E0",
-        horizontalAlignment: "center",
-        border: true
-      };
+        const leaves = await db.query.leaves.findMany({
+          where: and(
+            eq(leaves.employeeId, employeeId),
+            gte(leaves.startDate, startDate.toISOString()),
+            lte(leaves.endDate, endDate.toISOString())
+          ),
+          orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
+        });
 
-      // Başlık
-      sheet.cell("A1").value("Personel İzin Raporu").style(headerStyle);
-      sheet.range("A1:E1").merged(true);
+        // Header
+        sheet.cell("A1").value("PERSONEL İZİN RAPORU").style(headerStyle);
+        sheet.range("A1:E1").merged(true);
 
-      // Personel bilgileri
-      sheet.cell("A3").value("Personel Adı:").style(subHeaderStyle);
-      sheet.cell("B3").value(`${employee.firstName} ${employee.lastName}`);
-      sheet.cell("A4").value("Pozisyon:").style(subHeaderStyle);
-      sheet.cell("B4").value(employee.position || "-");
-      sheet.cell("A5").value("Dönem:").style(subHeaderStyle);
-      sheet.cell("B5").value(format(startDate, "MMMM yyyy", { locale: tr }));
+        // Logo veya şirket adı alanı
+        sheet.cell("A3").value("Şirket Adı").style(subHeaderStyle);
+        sheet.range("A3:B3").merged(true);
 
-      // Seçili ay için izin detayları tablosu
-      sheet.cell("A7").value("AYLIK İZİN DETAYLARI").style(headerStyle);
-      sheet.range("A7:D7").merged(true);
+        // Rapor detayları
+        sheet.cell("A4").value("Personel:").style(subHeaderStyle);
+        sheet.cell("B4").value(`${employee.firstName} ${employee.lastName}`).style(cellStyle);
+        sheet.cell("A5").value("Pozisyon:").style(subHeaderStyle);
+        sheet.cell("B5").value(employee.position || "-").style(cellStyle);
+        sheet.cell("A6").value("Dönem:").style(subHeaderStyle);
+        sheet.cell("B6").value(format(startDate, "MMMM yyyy", { locale: tr })).style(cellStyle);
 
-      sheet.cell("A8").value("Başlangıç").style(tableHeaderStyle);
-      sheet.cell("B8").value("Bitiş").style(tableHeaderStyle);
-      sheet.cell("C8").value("Süre (Gün)").style(tableHeaderStyle);
-      sheet.cell("D8").value("Not").style(tableHeaderStyle);
+        // Detay tablosu başlığı
+        sheet.cell("A8").value("İZİN DETAYLARI").style(headerStyle);
+        sheet.range("A8:D8").merged(true);
 
-      let row = 9;
-      let monthlyTotalDays = 0;
+        // Tablo başlıkları
+        sheet.cell("A9").value("Başlangıç").style(tableHeaderStyle);
+        sheet.cell("B9").value("Bitiş").style(tableHeaderStyle);
+        sheet.cell("C9").value("Gün").style(tableHeaderStyle);
+        sheet.cell("D9").value("Not").style(tableHeaderStyle);
 
-      employeeLeaves
-        .filter(leave => {
-          const leaveStart = parseISO(leave.startDate);
-          const leaveEnd = parseISO(leave.endDate);
-          return isWithinInterval(leaveStart, { start: startDate, end: endDate }) ||
-            isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
-            (leaveStart <= startDate && leaveEnd >= endDate);
-        })
-        .forEach((leave) => {
+        let row = 10;
+        let totalDays = 0;
+
+        leaves.forEach((leave) => {
           const start = parseISO(leave.startDate);
           const end = parseISO(leave.endDate);
           const days = differenceInDays(end, start) + 1;
-          monthlyTotalDays += days;
+          totalDays += days;
 
-          sheet.cell(`A${row}`).value(format(start, "dd.MM.yyyy")).style({ border: true });
-          sheet.cell(`B${row}`).value(format(end, "dd.MM.yyyy")).style({ border: true });
-          sheet.cell(`C${row}`).value(days).style({ border: true, horizontalAlignment: "center" });
-          sheet.cell(`D${row}`).value(leave.reason).style({ border: true });
+          sheet.cell(`A${row}`).value(format(start, "dd.MM.yyyy")).style(cellStyle);
+          sheet.cell(`B${row}`).value(format(end, "dd.MM.yyyy")).style(cellStyle);
+          sheet.cell(`C${row}`).value(days).style({ ...cellStyle, horizontalAlignment: "center" });
+          sheet.cell(`D${row}`).value(leave.reason || "-").style(cellStyle);
           row++;
         });
 
-      // Aylık toplam
-      sheet.cell(`A${row + 1}`).value("Aylık Toplam İzin:").style({ bold: true });
-      sheet.cell(`C${row + 1}`).value(monthlyTotalDays).style({ bold: true, horizontalAlignment: "center" });
+        // Toplam satırı
+        sheet.cell(`A${row + 1}`).value("TOPLAM").style(subHeaderStyle);
+        sheet.cell(`C${row + 1}`).value(totalDays).style({ ...subHeaderStyle, horizontalAlignment: "center" });
 
-      // Yıllık özet tablosu
-      row += 4;
-      sheet.cell(`A${row}`).value("YILLIK İZİN ÖZETİ").style(headerStyle);
-      sheet.range(`A${row}:D${row}`).merged(true);
-      row++;
-
-      sheet.cell(`A${row}`).value("Ay").style(tableHeaderStyle);
-      sheet.cell(`B${row}`).value("İzin Günü").style(tableHeaderStyle);
-      sheet.range(`C${row}:D${row}`).merged(true).value("Not").style(tableHeaderStyle);
-      row++;
-
-      let yearlyTotal = 0;
-      for (let m = 0; m < 12; m++) {
-        const monthStart = new Date(year, m, 1);
-        const monthEnd = endOfMonth(monthStart);
-        let monthlyDays = 0;
-        const monthlyLeaves = employeeLeaves.filter(leave => {
-          const leaveStart = parseISO(leave.startDate);
-          const leaveEnd = parseISO(leave.endDate);
-          return isWithinInterval(leaveStart, { start: monthStart, end: monthEnd }) ||
-            isWithinInterval(leaveEnd, { start: monthStart, end: monthEnd }) ||
-            (leaveStart <= monthStart && leaveEnd >= monthEnd);
+      } else {
+        // Tüm personeller için özet rapor
+        const allEmployees = await db.query.employees.findMany({
+          orderBy: (employees, { asc }) => [asc(employees.firstName), asc(employees.lastName)],
         });
 
-        monthlyLeaves.forEach(leave => {
-          const start = parseISO(leave.startDate);
-          const end = parseISO(leave.endDate);
-          const effectiveStart = start < monthStart ? monthStart : start;
-          const effectiveEnd = end > monthEnd ? monthEnd : end;
-          monthlyDays += differenceInDays(effectiveEnd, effectiveStart) + 1;
-        });
+        // Header
+        sheet.cell("A1").value("PERSONEL İZİN ÖZET RAPORU").style(headerStyle);
+        sheet.range("A1:F1").merged(true);
 
-        yearlyTotal += monthlyDays;
+        // Rapor bilgileri
+        sheet.cell("A3").value("Şirket Adı").style(subHeaderStyle);
+        sheet.range("A3:B3").merged(true);
+        sheet.cell("A4").value("Dönem:").style(subHeaderStyle);
+        sheet.cell("B4").value(format(startDate, "MMMM yyyy", { locale: tr })).style(cellStyle);
 
-        sheet.cell(`A${row}`).value(format(monthStart, "MMMM", { locale: tr })).style({ border: true });
-        sheet.cell(`B${row}`).value(monthlyDays).style({ border: true, horizontalAlignment: "center" });
-        sheet.range(`C${row}:D${row}`).merged(true).style({ border: true }).value(
-          monthlyDays > 0 ? monthlyLeaves.map(l => l.reason).join(", ") : "-"
-        );
-        row++;
+        // Tablo başlıkları
+        let currentRow = 6;
+        sheet.cell(`A${currentRow}`).value("Ad Soyad").style(tableHeaderStyle);
+        sheet.cell(`B${currentRow}`).value("Pozisyon").style(tableHeaderStyle);
+        sheet.cell(`C${currentRow}`).value("İzin Başlangıç").style(tableHeaderStyle);
+        sheet.cell(`D${currentRow}`).value("İzin Bitiş").style(tableHeaderStyle);
+        sheet.cell(`E${currentRow}`).value("Toplam Gün").style(tableHeaderStyle);
+        sheet.cell(`F${currentRow}`).value("Not").style(tableHeaderStyle);
+        currentRow++;
+
+        // Her personel için izinleri listele
+        for (const employee of allEmployees) {
+          const leaves = await db.query.leaves.findMany({
+            where: and(
+              eq(leaves.employeeId, employee.id),
+              gte(leaves.startDate, startDate.toISOString()),
+              lte(leaves.endDate, endDate.toISOString())
+            ),
+            orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
+          });
+
+          if (leaves.length > 0) {
+            leaves.forEach((leave) => {
+              const start = parseISO(leave.startDate);
+              const end = parseISO(leave.endDate);
+              const days = differenceInDays(end, start) + 1;
+
+              sheet.cell(`A${currentRow}`).value(`${employee.firstName} ${employee.lastName}`).style(cellStyle);
+              sheet.cell(`B${currentRow}`).value(employee.position || "-").style(cellStyle);
+              sheet.cell(`C${currentRow}`).value(format(start, "dd.MM.yyyy")).style(cellStyle);
+              sheet.cell(`D${currentRow}`).value(format(end, "dd.MM.yyyy")).style(cellStyle);
+              sheet.cell(`E${currentRow}`).value(days).style({ ...cellStyle, horizontalAlignment: "center" });
+              sheet.cell(`F${currentRow}`).value(leave.reason || "-").style(cellStyle);
+              currentRow++;
+            });
+          } else {
+            sheet.cell(`A${currentRow}`).value(`${employee.firstName} ${employee.lastName}`).style(cellStyle);
+            sheet.cell(`B${currentRow}`).value(employee.position || "-").style(cellStyle);
+            sheet.range(`C${currentRow}:F${currentRow}`).merged(true).value("İzin Bulunmuyor").style({ ...cellStyle, horizontalAlignment: "center" });
+            currentRow++;
+          }
+        }
+
+        // Sütun genişlikleri
+        sheet.column("A").width(25);
+        sheet.column("B").width(20);
+        sheet.column("C").width(15);
+        sheet.column("D").width(15);
+        sheet.column("E").width(12);
+        sheet.column("F").width(30);
       }
-
-      // Yıllık toplam
-      sheet.cell(`A${row}`).value("Yıllık Toplam:").style({ bold: true });
-      sheet.cell(`B${row}`).value(yearlyTotal).style({ bold: true, horizontalAlignment: "center" });
-
-      // Sütun genişlikleri
-      sheet.column("A").width(15);
-      sheet.column("B").width(15);
-      sheet.column("C").width(12);
-      sheet.column("D").width(40);
 
       const buffer = await workbook.outputAsync();
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -397,207 +448,6 @@ export function registerRoutes(app: Express): Server {
 
     } catch (error: any) {
       console.error("Excel rapor hatası:", error);
-      res.status(500).send("Rapor oluşturulamadı: " + error.message);
-    }
-  });
-
-  app.get("/api/reports/pdf", async (req, res) => {
-    try {
-      const employeeId = parseInt(req.query.employeeId as string);
-      const date = req.query.date as string;
-
-      if (!employeeId || !date) {
-        return res.status(400).send("Personel ID ve tarih zorunludur");
-      }
-
-      const [year, month] = date.split("-").map(Number);
-      const startDate = startOfMonth(new Date(year, month - 1));
-      const endDate = endOfMonth(new Date(year, month - 1));
-
-      const employee = await db.query.employees.findFirst({
-        where: eq(employees.id, employeeId),
-      });
-
-      if (!employee) {
-        return res.status(404).send("Personel bulunamadı");
-      }
-
-      // Tüm yıl için izinleri al
-      const yearStart = new Date(year, 0, 1);
-      const yearEnd = new Date(year, 11, 31);
-
-      const employeeLeaves = await db.query.leaves.findMany({
-        where: and(
-          eq(leaves.employeeId, employeeId),
-          gte(leaves.startDate, yearStart.toISOString()),
-          lte(leaves.endDate, yearEnd.toISOString())
-        ),
-        orderBy: (leaves, { asc }) => [asc(leaves.startDate)],
-      });
-
-      // PDF dosyası oluştur
-      const doc = new PDFDocument({
-        size: "A4",
-        margin: 50,
-        info: {
-          Title: 'İzin Raporu',
-          Author: 'İK Yönetim Sistemi',
-        }
-      });
-
-      // PDF akışını başlat
-      const chunks: Buffer[] = [];
-      doc.on("data", (chunk) => chunks.push(chunk));
-      doc.on("end", () => {
-        const result = Buffer.concat(chunks);
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `attachment; filename=izin-raporu-${format(startDate, "yyyy-MM")}.pdf`);
-        res.send(result);
-      });
-
-      // Başlık
-      doc.fontSize(24)
-        .fillColor('#1e40af')
-        .text('İzin Raporu', { align: 'center' });
-
-      doc.moveDown();
-
-      // Personel bilgileri
-      doc.fontSize(12)
-        .fillColor('#374151');
-
-      doc.text(`Personel: ${employee.firstName} ${employee.lastName}`);
-      doc.text(`Pozisyon: ${employee.position || "-"}`);
-      doc.text(`Dönem: ${format(startDate, "MMMM yyyy", { locale: tr })}`);
-
-      doc.moveDown();
-
-      // Seçili ay için izin detayları
-      doc.fontSize(16)
-        .fillColor('#1e40af')
-        .text('Aylık İzin Detayları');
-
-      doc.moveDown();
-
-      // Tablo başlıkları
-      doc.fontSize(11)
-        .fillColor('#374151');
-
-      let yPos = doc.y;
-      const colWidths = [100, 100, 60, 200];
-      const headers = ['Başlangıç', 'Bitiş', 'Gün', 'Not'];
-      let xPos = 50;
-
-      headers.forEach((header, i) => {
-        doc.text(header, xPos, yPos);
-        xPos += colWidths[i];
-      });
-
-      doc.moveDown();
-
-      // İzin detayları
-      let monthlyTotal = 0;
-
-      const monthlyLeaves = employeeLeaves.filter(leave => {
-        const leaveStart = parseISO(leave.startDate);
-        const leaveEnd = parseISO(leave.endDate);
-        return isWithinInterval(leaveStart, { start: startDate, end: endDate }) ||
-          isWithinInterval(leaveEnd, { start: startDate, end: endDate }) ||
-          (leaveStart <= startDate && leaveEnd >= endDate);
-      });
-
-      monthlyLeaves.forEach((leave) => {
-        const start = parseISO(leave.startDate);
-        const end = parseISO(leave.endDate);
-        const days = differenceInDays(end, start) + 1;
-        monthlyTotal += days;
-
-        xPos = 50;
-        doc.text(format(start, "dd.MM.yyyy"), xPos, doc.y);
-        xPos += colWidths[0];
-        doc.text(format(end, "dd.MM.yyyy"), xPos, doc.y);
-        xPos += colWidths[1];
-        doc.text(`${days} gün`, xPos, doc.y);
-        xPos += colWidths[2];
-        doc.text(leave.reason || "-", xPos, doc.y);
-        doc.moveDown();
-      });
-
-      doc.moveDown()
-        .fontSize(12)
-        .text(`Aylık Toplam: ${monthlyTotal} gün`, { underline: true });
-
-      doc.moveDown(2);
-
-      // Yıllık özet
-      doc.fontSize(16)
-        .fillColor('#1e40af')
-        .text('Yıllık İzin Özeti');
-
-      doc.moveDown();
-
-      // Yıllık tablo
-      doc.fontSize(11)
-        .fillColor('#374151');
-
-      let yearlyTotal = 0;
-      const months = Array.from({ length: 12 }, (_, i) => {
-        const monthDate = new Date(year, i, 1);
-        const monthEnd = endOfMonth(monthDate);
-        let monthlyDays = 0;
-
-        const monthlyLeaves = employeeLeaves.filter(leave => {
-          const leaveStart = parseISO(leave.startDate);
-          const leaveEnd = parseISO(leave.endDate);
-          return isWithinInterval(leaveStart, { start: monthDate, end: monthEnd }) ||
-            isWithinInterval(leaveEnd, { start: monthDate, end: monthEnd }) ||
-            (leaveStart <= monthDate && leaveEnd >= monthEnd);
-        });
-
-        monthlyLeaves.forEach(leave => {
-          const start = parseISO(leave.startDate);
-          const end = parseISO(leave.endDate);
-          const effectiveStart = start < monthDate ? monthDate : start;
-          const effectiveEnd = end > monthEnd ? monthEnd : end;
-          monthlyDays += differenceInDays(effectiveEnd, effectiveStart) + 1;
-        });
-
-        yearlyTotal += monthlyDays;
-
-        return {
-          name: format(monthDate, "MMMM", { locale: tr }),
-          days: monthlyDays,
-          notes: monthlyDays > 0 ? monthlyLeaves.map(l => l.reason).join(", ") : "-"
-        };
-      });
-
-      months.forEach(month => {
-        xPos = 50;
-        doc.text(month.name, xPos, doc.y);
-        xPos += 100;
-        doc.text(`${month.days} gün`, xPos, doc.y);
-        xPos += 60;
-        doc.text(month.notes, xPos, doc.y);
-        doc.moveDown();
-      });
-
-      doc.moveDown()
-        .fontSize(12)
-        .text(`Yıllık Toplam: ${yearlyTotal} gün`, { underline: true });
-
-      // Footer
-      doc.fontSize(8)
-        .fillColor('#6b7280')
-        .text(
-          'Bu rapor otomatik olarak oluşturulmuştur.',
-          { align: 'center' }
-        );
-
-      // PDF'i sonlandır
-      doc.end();
-
-    } catch (error: any) {
-      console.error("PDF rapor hatası:", error);
       res.status(500).send("Rapor oluşturulamadı: " + error.message);
     }
   });
@@ -774,20 +624,61 @@ export function registerRoutes(app: Express): Server {
         bold: true,
         fontSize: 16,
         horizontalAlignment: "center",
-        fontColor: "0000FF"
+        fontColor: "0000FF",
+        fill: {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: "F8F9FA"
+        },
+        border: {
+          top: { style: "thin", color: "E9ECEF" },
+          bottom: { style: "thin", color: "E9ECEF" },
+          left: { style: "thin", color: "E9ECEF" },
+          right: { style: "thin", color: "E9ECEF" }
+        }
       };
 
       const subHeaderStyle = {
         bold: true,
         fontSize: 11,
-        fill: "F0F0F0"
+        fill: {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: "F8F9FA"
+        },
+        border: {
+          top: { style: "thin", color: "E9ECEF" },
+          bottom: { style: "thin", color: "E9ECEF" },
+          left: { style: "thin", color: "E9ECEF" },
+          right: { style: "thin", color: "E9ECEF" }
+        }
       };
 
       const tableHeaderStyle = {
         bold: true,
-        fill: "E0E0E0",
+        fontSize: 10,
         horizontalAlignment: "center",
-        border: true
+        fill: {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: "F1F3F5"
+        },
+        border: {
+          top: { style: "thin", color: "DEE2E6" },
+          bottom: { style: "thin", color: "DEE2E6" },
+          left: { style: "thin", color: "DEE2E6" },
+          right: { style: "thin", color: "DEE2E6" }
+        }
+      };
+
+      const cellStyle = {
+        fontSize: 10,
+        border: {
+          top: { style: "thin", color: "E9ECEF" },
+          bottom: { style: "thin", color: "E9ECEF" },
+          left: { style: "thin", color: "E9ECEF" },
+          right: { style: "thin", color: "E9ECEF" }
+        }
       };
 
       if (employeeId) {
