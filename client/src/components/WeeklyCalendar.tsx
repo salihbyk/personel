@@ -20,21 +20,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar as CalendarIcon, X, Check } from "lucide-react";
+import { Calendar as CalendarIcon, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
-import { format, addDays, startOfWeek, isWithinInterval, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, isWithinInterval, parseISO, addWeeks, subWeeks } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { Employee, Leave } from "@db/schema";
 
@@ -184,37 +179,44 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
     );
   };
 
+  const handlePreviousWeek = () => {
+    setCurrentDate(subWeeks(currentDate, 1));
+  };
+
+  const handleNextWeek = () => {
+    setCurrentDate(addWeeks(currentDate, 1));
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                cardStyle,
-                "justify-start text-left font-normal border-2 border-blue-300",
-                !currentDate && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {currentDate ? (
-                format(currentDate, "MMMM yyyy", { locale: tr })
-              ) : (
-                <span>Tarih Seç</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={currentDate}
-              onSelect={(date) => date && setCurrentDate(date)}
-              initialFocus
-              locale={tr}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePreviousWeek}
+            className={cn(
+              "transition-all hover:scale-105",
+              cardStyle
+            )}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNextWeek}
+            className={cn(
+              "transition-all hover:scale-105",
+              cardStyle
+            )}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="text-sm font-medium text-muted-foreground">
+          {format(startDate, "MMMM yyyy", { locale: tr })}
+        </div>
       </div>
 
       {leavesLoading ? (

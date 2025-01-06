@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 export default function Dashboard() {
-  const { data: employees, isLoading } = useQuery<Employee[]>({
+  const { data: employees, isLoading: employeesLoading } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
   });
 
@@ -88,7 +88,7 @@ export default function Dashboard() {
   const todayLeaveCount = leaves?.filter(leave => {
     const startDate = parseISO(leave.startDate);
     const endDate = parseISO(leave.endDate);
-    return isWithinInterval(today, { 
+    return isWithinInterval(today, {
       start: startOfDay(startDate),
       end: endOfDay(endDate)
     });
@@ -98,13 +98,13 @@ export default function Dashboard() {
   const todayLeaves = leaves?.filter(leave => {
     const startDate = parseISO(leave.startDate);
     const endDate = parseISO(leave.endDate);
-    return isWithinInterval(today, { 
+    return isWithinInterval(today, {
       start: startOfDay(startDate),
       end: endOfDay(endDate)
     });
   }) || [];
 
-  if (isLoading) {
+  if (employeesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -112,8 +112,22 @@ export default function Dashboard() {
     );
   }
 
+  // Helper function to check if all employees are selected
+  const areAllEmployeesSelected = () => {
+    return employees?.length === selectedEmployees.length;
+  };
+
+  // Helper function to handle "Tüm Personel" selection
+  const handleSelectAllEmployees = () => {
+    if (areAllEmployeesSelected()) {
+      setSelectedEmployees([]);
+    } else {
+      setSelectedEmployees(employees?.map(emp => emp.id) || []);
+    }
+  };
+
   return (
-    <Layout employees={employees || []} isLoading={isLoading}>
+    <Layout employees={employees || []} isLoading={employeesLoading}>
       <div className="p-6">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -245,6 +259,23 @@ export default function Dashboard() {
                       <CommandEmpty>Personel bulunamadı.</CommandEmpty>
                       <CommandGroup>
                         <ScrollArea className="h-72">
+                          <CommandItem
+                            onSelect={handleSelectAllEmployees}
+                            className="font-medium text-purple-600"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                areAllEmployeesSelected()
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            Tüm Personel
+                          </CommandItem>
+                          <CommandItem>
+                            <div className="h-px w-full bg-border my-1" />
+                          </CommandItem>
                           {employees?.map((employee) => (
                             <CommandItem
                               key={employee.id}
