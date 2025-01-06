@@ -1,8 +1,52 @@
 // Type declarations for modules without types
-declare module 'xlsx-populate';
-declare module 'pdfkit';
+declare module 'xlsx-populate' {
+  interface Workbook {
+    sheet(index: number): Sheet;
+    outputAsync(): Promise<Buffer>;
+  }
 
-import type { Express } from "express";
+  interface Sheet {
+    cell(ref: string): Cell;
+    range(range: string): Range;
+    column(col: string): Column;
+  }
+
+  interface Cell {
+    value(value?: any): Cell;
+    formula(formula: string): Cell;
+    style(style: any): Cell;
+  }
+
+  interface Range {
+    merged(merged: boolean): Range;
+    style(style: any): Range;
+    value(value: any): Range;
+  }
+
+  interface Column {
+    width(width: number): void;
+  }
+
+  const XlsxPopulate: {
+    fromBlankAsync(): Promise<Workbook>;
+  };
+  export = XlsxPopulate;
+}
+
+declare module 'pdfkit' {
+  class PDFDocument {
+    constructor(options?: any);
+    on(event: string, callback: (chunk: Buffer) => void): void;
+    fontSize(size: number): this;
+    fillColor(color: string): this;
+    text(text: string, options?: any): this;
+    moveDown(): this;
+    end(): void;
+  }
+  export = PDFDocument;
+}
+
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { employees, leaves, inventoryItems, dailyAchievements } from "@db/schema";
@@ -11,10 +55,11 @@ import XlsxPopulate from "xlsx-populate";
 import PDFDocument from "pdfkit";
 import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
+import type { SQL } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // API güvenlik kontrolü
-  const requireAuth = (req: any, res: any, next: any) => {
+  const requireAuth = (req: Request, res: Response, next: Function) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Giriş yapılmadı");
     }
@@ -27,8 +72,8 @@ export function registerRoutes(app: Express): Server {
   app.use("/api/inventory", requireAuth);
   app.use("/api/reports", requireAuth);
 
-  // Employees
-  app.get("/api/employees", async (req, res) => {
+  // Get employees
+  app.get("/api/employees", async (_req, res) => {
     try {
       const allEmployees = await db.query.employees.findMany();
       res.json(allEmployees);
@@ -87,13 +132,54 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Leaves (İzinler)
+  // Bulk leave management
+  app.post("/api/leaves/bulk", async (req, res) => {
+    try {
+      const { employeeIds, startDate, endDate, reason } = req.body;
+
+      if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
+        return res.status(400).send("En az bir personel seçilmelidir");
+      }
+
+      if (!startDate || !endDate) {
+        return res.status(400).send("Başlangıç ve bitiş tarihi gereklidir");
+      }
+
+      const createdLeaves = await db.transaction(async (tx) => {
+        const leavePromises = employeeIds.map((employeeId) =>
+          tx.insert(leaves).values({
+            employeeId,
+            startDate,
+            endDate,
+            reason: reason || null,
+            type: "ANNUAL",
+            status: "APPROVED",
+          }).returning()
+        );
+
+        return await Promise.all(leavePromises);
+      });
+
+      res.json(createdLeaves.flat());
+    } catch (error: any) {
+      console.error("Toplu izin ekleme hatası:", error);
+      res.status(400).send("İzinler eklenemedi: " + error.message);
+    }
+  });
+
+  // Get leaves
   app.get("/api/leaves", async (req, res) => {
     try {
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const conditions: SQL<unknown>[] = [];
+
+      if (employeeId) {
+        conditions.push(eq(leaves.employeeId, employeeId));
+      }
+
       const allLeaves = await db.query.leaves.findMany({
-        where: employeeId ? eq(leaves.employeeId, employeeId) : undefined,
-        orderBy: (leaves, { desc }) => [desc(leaves.startDate)],
+        where: conditions.length > 0 ? and(...conditions) : undefined,
+        orderBy: [desc(leaves.startDate)],
       });
       res.json(allLeaves);
     } catch (error: any) {
@@ -101,6 +187,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Create leave
   app.post("/api/leaves", async (req, res) => {
     try {
       const leave = await db.insert(leaves).values(req.body).returning();
@@ -110,7 +197,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // İzin silme endpoint'i eklendi
   app.delete("/api/leaves/:id", async (req, res) => {
     try {
       const result = await db.delete(leaves)
@@ -127,8 +213,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).send("İzin silinemedi: " + error.message);
     }
   });
-
-
   // Raporlama API'leri
   app.get("/api/reports/excel", async (req, res) => {
     try {
@@ -346,7 +430,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       // PDF akışını başlat
-      const chunks: any[] = [];
+      const chunks: Buffer[] = [];
       doc.on("data", (chunk) => chunks.push(chunk));
       doc.on("end", () => {
         const result = Buffer.concat(chunks);
@@ -652,6 +736,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Fix for achievements excel report section
   app.get("/api/achievements/excel", async (req, res) => {
     try {
       const date = req.query.date as string;
@@ -746,7 +831,7 @@ export function registerRoutes(app: Express): Server {
             'CHEF': 'Şef',
             'X': 'Zarar'
           }[achievement.type]).style({ border: true });
-          sheet.cell(`C${row}`).value(achievement.notes || "-").style({ border: true });
+          sheet.cell`C${row}`).value(achievement.notes || "-").style({ border: true });
           row++;
         });
 
@@ -784,14 +869,14 @@ export function registerRoutes(app: Express): Server {
         sheet.cell("B3").value(format(startDate, "MMMM yyyy", { locale: tr }));
 
         // Tablo başlıkları
-        let row = 5;
-        sheet.cell(`A${row}`).value("Ad Soyad").style(tableHeaderStyle);
-        sheet.cell(`B${row}`).value("Pozisyon").style(tableHeaderStyle);
-        sheet.cell(`C${row}`).value("Yıldız").style(tableHeaderStyle);
-        sheet.cell(`D${row}`).value("Şef").style(tableHeaderStyle);
-        sheet.cell(`E${row}`).value("Zarar").style(tableHeaderStyle);
-        sheet.cell(`F${row}`).value("Toplam").style(tableHeaderStyle);
-        row++;
+        let currentRow = 5;
+        sheet.cell(`A${currentRow}`).value("Ad Soyad").style(tableHeaderStyle);
+        sheet.cell(`B${currentRow}`).value("Pozisyon").style(tableHeaderStyle);
+        sheet.cell(`C${currentRow}`).value("Yıldız").style(tableHeaderStyle);
+        sheet.cell(`D${currentRow}`).value("Şef").style(tableHeaderStyle);
+        sheet.cell(`E${currentRow}`).value("Zarar").style(tableHeaderStyle);
+        sheet.cell(`F${currentRow}`).value("Toplam").style(tableHeaderStyle);
+        currentRow++;
 
         // Her personel için performans verilerini al
         for (const employee of allEmployees) {
@@ -799,35 +884,36 @@ export function registerRoutes(app: Express): Server {
             where: and(
               eq(dailyAchievements.employeeId, employee.id),
               gte(dailyAchievements.date, startDate.toISOString()),
-              lte(dailyAchievements.date,endDate.toISOString())
+              lte(dailyAchievements.date, endDate.toISOString())
             ),
             orderBy: (achievements, { asc }) => [asc(achievements.date)],
           });
 
-          const stats = {            STAR: achievements.filter(a => a.type === 'STAR').length,
+          const stats = {
+            STAR: achievements.filter(a => a.type === 'STAR').length,
             CHEF: achievements.filter(a => a.type === 'CHEF').length,
             X: achievements.filter(a => a.type === 'X').length,
           };
 
-          sheet.cell(`A${row}`).value(`${employee.firstName} ${employee.lastName}`).style({ border: true });
-          sheet.cell(`B${row}`).value(employee.position || "-").style({ border: true });
-          sheet.cell(`C${row}`).value(stats.STAR).style({ border: true, horizontalAlignment: "center" });
-          sheet.cell(`D${row}`).value(stats.CHEF).style({ border: true, horizontalAlignment: "center" });
-          sheet.cell(`E${row}`).value(stats.X).style({ border: true, horizontalAlignment: "center" });
-          sheet.cell(`F${row}`).value(stats.STAR + stats.CHEF + stats.X).style({ border: true, horizontalAlignment: "center" });
-          row++;
+          sheet.cell(`A${currentRow}`).value(`${employee.firstName} ${employee.lastName}`).style({ border: true });
+          sheet.cell(`B${currentRow}`).value(employee.position || "-").style({ border: true });
+          sheet.cell(`C${currentRow}`).value(stats.STAR).style({ border: true, horizontalAlignment: "center" });
+          sheet.cell(`D${currentRow}`).value(stats.CHEF).style({ border: true, horizontalAlignment: "center" });
+          sheet.cell(`E${currentRow}`).value(stats.X).style({ border: true, horizontalAlignment: "center" });
+          sheet.cell(`F${currentRow}`).value(stats.STAR + stats.CHEF + stats.X).style({ border: true, horizontalAlignment: "center" });
+          currentRow++;
         }
 
         // Toplam satırı
-        row++;
-        sheet.cell(`A${row}`).value("TOPLAM").style(subHeaderStyle);
-        sheet.range(`A${row}:B${row}`).merged(true);
+        currentRow++;
+        sheet.cell(`A${currentRow}`).value("TOPLAM").style(subHeaderStyle);
+        sheet.range(`A${currentRow}:B${currentRow}`).merged(true);
 
         // Toplam formülleri
-        sheet.cell(`C${row}`).formula(`=SUM(C6:C${row-2})`).style(subHeaderStyle);
-        sheet.cell(`D${row}`).formula(`=SUM(D6:D${row-2})`).style(subHeaderStyle);
-        sheet.cell(`E${row}`).formula(`=SUM(E6:E${row-2})`).style(subHeaderStyle);
-        sheet.cell(`F${row}`).formula(`=SUM(F6:F${row-2})`).style(subHeaderStyle);
+        sheet.cell(`C${currentRow}`).formula(`=SUM(C6:C${currentRow - 2})`).style(subHeaderStyle);
+        sheet.cell(`D${currentRow}`).formula(`=SUM(D6:D${currentRow - 2})`).style(subHeaderStyle);
+        sheet.cell(`E${currentRow}`).formula(`=SUM(E6:E${currentRow - 2})`).style(subHeaderStyle);
+        sheet.cell(`F${currentRow}`).formula(`=SUM(F6:F${currentRow - 2})`).style(subHeaderStyle);
 
         // Sütun genişlikleri
         sheet.column("A").width(30);
@@ -846,6 +932,75 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Excel rapor hatası:", error);
       res.status(500).send("Rapor oluşturulamadı: " + error.message);
+    }
+  });
+
+  // Daily Achievements API Routes
+  app.get("/api/achievements", async (req, res) => {
+    try {
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const startDate = req.query.startDate ? req.query.startDate as string : undefined;
+      const endDate = req.query.endDate ? req.query.endDate as string : undefined;
+
+      let query = db.select().from(dailyAchievements);
+
+      if (employeeId) {
+        query = query.where(eq(dailyAchievements.employeeId, employeeId));
+      }
+
+      if (startDate && endDate) {
+        query = query.where(
+          and(
+            gte(dailyAchievements.date, startDate),
+            lte(dailyAchievements.date, endDate)
+          )
+        );
+      }
+
+      query = query.orderBy(desc(dailyAchievements.date));
+
+      const achievements = await query;
+      res.json(achievements);
+    } catch (error: any) {
+      console.error("Başarı listesi alınamadı:", error);
+      res.status(500).send("Başarı listesi alınamadı: " + error.message);
+    }
+  });
+
+  app.post("/api/achievements", async (req, res) => {
+    try {
+      const achievement = await db.insert(dailyAchievements).values(req.body).returning();
+      res.json(achievement[0]);
+    } catch (error: any) {
+      console.error("Başarı eklenemedi:", error);
+      res.status(400).send("Başarı eklenemedi: " + error.message);
+    }
+  });
+
+  app.put("/api/achievements/:id", async (req, res) => {
+    try {
+      const achievement = await db
+        .update(dailyAchievements)
+        .set(req.body)
+        .where(eq(dailyAchievements.id, parseInt(req.params.id)))
+        .returning();
+      res.json(achievement[0]);
+    } catch (error: any) {
+      console.error("Başarı güncellenemedi:", error);
+      res.status(400).send("Başarı güncellenemedi: " + error.message);
+    }
+  });
+
+  app.delete("/api/achievements/:id", async (req, res) => {
+    try {
+      await db
+        .delete(dailyAchievements)
+        .where(eq(dailyAchievements.id, parseInt(req.params.id)))
+        .returning();
+      res.json({ message: "Başarı silindi" });
+    } catch (error: any) {
+      console.error("Başarı silinemedi:", error);
+      res.status(400).send("Başarı silinemedi: " + error.message);
     }
   });
 

@@ -1,14 +1,34 @@
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeeklyCalendar } from "@/components/WeeklyCalendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Users, CalendarDays, CalendarClock } from "lucide-react";
-import { isWithinInterval, parseISO, startOfDay, endOfDay, format, differenceInDays } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Users, CalendarDays, CalendarClock, Check, ChevronsUpDown } from "lucide-react";
+import { isWithinInterval, parseISO, startOfDay, endOfDay, format, differenceInDays, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { Employee, Leave } from "@db/schema";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function Dashboard() {
   const { data: employees, isLoading } = useQuery<Employee[]>({
@@ -17,6 +37,50 @@ export default function Dashboard() {
 
   const { data: leaves } = useQuery<Leave[]>({
     queryKey: ["/api/leaves"],
+  });
+
+  const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [days, setDays] = useState("1");
+  const [notes, setNotes] = useState("");
+  const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const bulkLeaveMutation = useMutation({
+    mutationFn: async (data: { employeeIds: number[]; startDate: string; endDate: string; reason?: string }) => {
+      const response = await fetch("/api/leaves/bulk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leaves"] });
+      toast({
+        title: "Başarılı",
+        description: "Toplu izin kaydedildi",
+      });
+      setSelectedEmployees([]);
+      setSelectedDate(undefined);
+      setDays("1");
+      setNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Bugün izinli olan personel sayısını hesapla
@@ -146,6 +210,150 @@ export default function Dashboard() {
                 })}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* New Bulk Leave Management Section */}
+        <Card className="mb-6 bg-gradient-to-br from-purple-50 via-white to-purple-50 border-purple-100 transition-all duration-300 hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Users className="h-5 w-5 text-purple-600" />
+              Toplu İzin Yönetimi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label>Personel Seçimi</Label>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="justify-between w-full md:w-[500px]"
+                    >
+                      {selectedEmployees.length > 0
+                        ? `${selectedEmployees.length} personel seçildi`
+                        : "Personel seçin..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full md:w-[500px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Personel ara..." />
+                      <CommandEmpty>Personel bulunamadı.</CommandEmpty>
+                      <CommandGroup>
+                        <ScrollArea className="h-72">
+                          {employees?.map((employee) => (
+                            <CommandItem
+                              key={employee.id}
+                              onSelect={() => {
+                                setSelectedEmployees((prev) =>
+                                  prev.includes(employee.id)
+                                    ? prev.filter((id) => id !== employee.id)
+                                    : [...prev, employee.id]
+                                );
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedEmployees.includes(employee.id)
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              {employee.firstName} {employee.lastName}
+                            </CommandItem>
+                          ))}
+                        </ScrollArea>
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Başlangıç Tarihi</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {selectedDate ? (
+                          format(selectedDate, "d MMMM yyyy", { locale: tr })
+                        ) : (
+                          <span>Tarih seçin</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                        locale={tr}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Gün Sayısı</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={days}
+                    onChange={(e) => setDays(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Not (Opsiyonel)</Label>
+                <Textarea
+                  placeholder="İzin notu ekleyin..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+
+              <Button
+                className="w-full md:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                onClick={() => {
+                  if (!selectedDate || selectedEmployees.length === 0) {
+                    toast({
+                      title: "Uyarı",
+                      description: "Lütfen tarih ve en az bir personel seçin.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  const endDate = addDays(selectedDate, Number(days) - 1);
+                  bulkLeaveMutation.mutate({
+                    employeeIds: selectedEmployees,
+                    startDate: format(selectedDate, "yyyy-MM-dd"),
+                    endDate: format(endDate, "yyyy-MM-dd"),
+                    reason: notes || undefined,
+                  });
+                }}
+                disabled={bulkLeaveMutation.isPending}
+              >
+                {bulkLeaveMutation.isPending ? "Kaydediliyor..." : "Toplu İzin Ekle"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
