@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, FileSpreadsheet } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet, Users, Medal, Trophy, Calendar as CalendarIcon2 } from "lucide-react";
 import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -118,9 +118,98 @@ export default function ReportingPage() {
       ? employees?.filter(emp => emp.id === parseInt(selectedEmployeeId))
       : employees;
 
+  // İzin istatistiklerini hesapla
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+
+  const employeeStats = employees?.map(employee => {
+    const monthlyLeaves = calculateLeaves(employee.id, monthStart, monthEnd);
+    const totalDays = calculateLeaveDays(monthlyLeaves, monthStart, monthEnd);
+    return {
+      ...employee,
+      leaveDays: totalDays
+    };
+  }).sort((a, b) => b.leaveDays - a.leaveDays) || [];
+
+  const topLeaveTakers = employeeStats.slice(0, 3);
+  const leastLeaveTakers = [...employeeStats].sort((a, b) => a.leaveDays - b.leaveDays).slice(0, 3);
+  const totalLeaveUsers = employeeStats.filter(emp => emp.leaveDays > 0).length;
+  const totalLeaveDays = employeeStats.reduce((sum, emp) => sum + emp.leaveDays, 0);
+
   return (
     <Layout employees={employees || []} isLoading={employeesLoading}>
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl space-y-6">
+        {/* İstatistik Kartları */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* En Çok İzin Kullananlar */}
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-800 flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-blue-600" />
+                En Çok İzin Kullananlar
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {topLeaveTakers.map((emp, index) => (
+                <div key={emp.id} className="flex items-center justify-between mb-1 text-sm">
+                  <span className="text-blue-700">
+                    {index + 1}. {emp.firstName} {emp.lastName}
+                  </span>
+                  <span className="font-medium text-blue-900">{emp.leaveDays} gün</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* En Az İzin Kullananlar */}
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-green-800 flex items-center gap-2">
+                <Medal className="h-4 w-4 text-green-600" />
+                En Az İzin Kullananlar
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {leastLeaveTakers.map((emp, index) => (
+                <div key={emp.id} className="flex items-center justify-between mb-1 text-sm">
+                  <span className="text-green-700">
+                    {index + 1}. {emp.firstName} {emp.lastName}
+                  </span>
+                  <span className="font-medium text-green-900">{emp.leaveDays} gün</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Toplam İzin Günü */}
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-purple-800 flex items-center gap-2">
+                <CalendarIcon2 className="h-4 w-4 text-purple-600" />
+                Toplam İzin Günü
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-900">{totalLeaveDays}</div>
+              <p className="text-sm text-purple-700">Bu ay toplam izin günü</p>
+            </CardContent>
+          </Card>
+
+          {/* İzinli Personel Sayısı */}
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-orange-800 flex items-center gap-2">
+                <Users className="h-4 w-4 text-orange-600" />
+                İzinli Personel Sayısı
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-900">{totalLeaveUsers}</div>
+              <p className="text-sm text-orange-700">Bu ay izin kullanan personel</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm">
           <h1 className="text-2xl font-bold">İzin Raporları</h1>
           <div className="flex flex-wrap items-center gap-2">
