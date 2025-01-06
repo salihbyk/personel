@@ -123,14 +123,14 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/employees/:id", async (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);
-      
+
       // Önce bağlı kayıtları sil
       await db.delete(leaves).where(eq(leaves.employeeId, employeeId));
       await db.delete(dailyAchievements).where(eq(dailyAchievements.employeeId, employeeId));
       await db.update(inventoryItems)
         .set({ assignedTo: null, assignedAt: null })
         .where(eq(inventoryItems.assignedTo, employeeId));
-      
+
       // Sonra personeli sil
       const result = await db
         .delete(employees)
