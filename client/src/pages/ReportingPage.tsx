@@ -140,7 +140,7 @@ export default function ReportingPage() {
     <Layout employees={employees || []} isLoading={employeesLoading}>
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl space-y-6">
         {/* İstatistik Kartları */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* En Çok İzin Kullananlar */}
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardHeader className="pb-2">
@@ -178,20 +178,6 @@ export default function ReportingPage() {
                   <span className="font-medium text-green-900">{emp.leaveDays} gün</span>
                 </div>
               ))}
-            </CardContent>
-          </Card>
-
-          {/* Toplam İzin Günü */}
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-purple-800 flex items-center gap-2">
-                <CalendarIcon2 className="h-4 w-4 text-purple-600" />
-                Toplam İzin Günü
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-900">{totalLeaveDays}</div>
-              <p className="text-sm text-purple-700">Bu ay toplam izin günü</p>
             </CardContent>
           </Card>
 
