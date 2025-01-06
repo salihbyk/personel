@@ -736,7 +736,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Fix for achievements excel report section
+  // Fix the achievements Excel report section
   app.get("/api/achievements/excel", async (req, res) => {
     try {
       const date = req.query.date as string;
@@ -747,10 +747,13 @@ export function registerRoutes(app: Express): Server {
       }
 
       const [year, month] = date.split("-").map(Number);
-      const startDate = startOfMonth(new Date(year, month - 1));
-      const endDate = endOfMonth(new Date(year, month - 1));
+      const reportStartDate = startOfMonth(new Date(year, month - 1));
+      const reportEndDate = endOfMonth(new Date(year, month - 1));
 
-      // Stil tanımlamaları
+      const workbook = await XlsxPopulate.fromBlankAsync();
+      const sheet = workbook.sheet(0);
+
+      // Define styles
       const headerStyle = {
         bold: true,
         fontSize: 16,
@@ -771,12 +774,8 @@ export function registerRoutes(app: Express): Server {
         border: true
       };
 
-      // Excel dosyası oluştur
-      const workbook = await XlsxPopulate.fromBlankAsync();
-      const sheet = workbook.sheet(0);
-
       if (employeeId) {
-        // Tek personel detaylı rapor
+        // Single employee detailed report
         const employee = await db.query.employees.findFirst({
           where: eq(employees.id, employeeId),
         });
@@ -788,25 +787,24 @@ export function registerRoutes(app: Express): Server {
         const achievements = await db.query.dailyAchievements.findMany({
           where: and(
             eq(dailyAchievements.employeeId, employeeId),
-            gte(dailyAchievements.date, startDate.toISOString()),
-            lte(dailyAchievements.date, endDate.toISOString())
+            gte(dailyAchievements.date, reportStartDate.toISOString()),
+            lte(dailyAchievements.date, reportEndDate.toISOString())
           ),
           orderBy: (achievements, { asc }) => [asc(achievements.date)],
         });
 
-        // Başlık
+        // Header and employee info
         sheet.cell("A1").value("Personel Performans Raporu").style(headerStyle);
         sheet.range("A1:E1").merged(true);
 
-        // Personel bilgileri
         sheet.cell("A3").value("Personel Adı:").style(subHeaderStyle);
         sheet.cell("B3").value(`${employee.firstName} ${employee.lastName}`);
         sheet.cell("A4").value("Pozisyon:").style(subHeaderStyle);
         sheet.cell("B4").value(employee.position || "-");
         sheet.cell("A5").value("Dönem:").style(subHeaderStyle);
-        sheet.cell("B5").value(format(startDate, "MMMM yyyy", { locale: tr }));
+        sheet.cell("B5").value(format(reportStartDate, "MMMM yyyy", { locale: tr }));
 
-        // Başarı detayları tablosu
+        // Achievement details table
         sheet.cell("A7").value("AYLIK PERFORMANS DETAYLARI").style(headerStyle);
         sheet.range("A7:D7").merged(true);
 
@@ -814,8 +812,8 @@ export function registerRoutes(app: Express): Server {
         sheet.cell("B8").value("Tip").style(tableHeaderStyle);
         sheet.cell("C8").value("Not").style(tableHeaderStyle);
 
-        let row = 9;
-        let stats = {
+        let currentRow = 9;
+        const stats = {
           STAR: 0,
           CHEF: 0,
           X: 0,
@@ -825,50 +823,50 @@ export function registerRoutes(app: Express): Server {
           const achievementDate = parseISO(achievement.date);
           stats[achievement.type as keyof typeof stats]++;
 
-          sheet.cell(`A${row}`).value(format(achievementDate, "dd.MM.yyyy")).style({ border: true });
-          sheet.cell(`B${row}`).value({
+          sheet.cell(`A${currentRow}`).value(format(achievementDate, "dd.MM.yyyy")).style({ border: true });
+          sheet.cell(`B${currentRow}`).value({
             'STAR': 'Yıldız',
             'CHEF': 'Şef',
             'X': 'Zarar'
           }[achievement.type]).style({ border: true });
-          sheet.cell(`C${row}`).value(achievement.notes || "-").style({ border: true });
-          row++;
+          sheet.cell(`C${currentRow}`).value(achievement.notes || "-").style({ border: true });
+          currentRow++;
         });
 
-        // Aylık özet
-        row += 2;
-        sheet.cell(`A${row}`).value("AYLIK ÖZET").style(headerStyle);
-        sheet.range(`A${row}:C${row}`).merged(true);
-        row++;
+        // Monthly summary
+        currentRow += 2;
+        sheet.cell(`A${currentRow}`).value("AYLIK ÖZET").style(headerStyle);
+        sheet.range(`A${currentRow}:C${currentRow}`).merged(true);
+        currentRow++;
 
-        sheet.cell(`A${row}`).value("Yıldız:").style(subHeaderStyle);
-        sheet.cell(`B${row}`).value(stats.STAR);
-        row++;
+        sheet.cell(`A${currentRow}`).value("Yıldız:").style(subHeaderStyle);
+        sheet.cell(`B${currentRow}`).value(stats.STAR);
+        currentRow++;
 
-        sheet.cell(`A${row}`).value("Şef:").style(subHeaderStyle);
-        sheet.cell(`B${row}`).value(stats.CHEF);
-        row++;
+        sheet.cell(`A${currentRow}`).value("Şef:").style(subHeaderStyle);
+        sheet.cell(`B${currentRow}`).value(stats.CHEF);
+        currentRow++;
 
-        sheet.cell(`A${row}`).value("Zarar:").style(subHeaderStyle);
-        sheet.cell(`B${row}`).value(stats.X);
+        sheet.cell(`A${currentRow}`).value("Zarar:").style(subHeaderStyle);
+        sheet.cell(`B${currentRow}`).value(stats.X);
 
-        // Sütun genişlikleri
+        // Column widths
         sheet.column("A").width(15);
         sheet.column("B").width(15);
         sheet.column("C").width(40);
 
       } else {
-        // Tüm personeller için özet rapor
+        // Summary report for all employees
         const allEmployees = await db.query.employees.findMany();
 
-        // Başlık
+        // Header
         sheet.cell("A1").value("Aylık Performans Raporu").style(headerStyle);
         sheet.range("A1:F1").merged(true);
 
         sheet.cell("A3").value("Dönem:").style(subHeaderStyle);
-        sheet.cell("B3").value(format(startDate, "MMMM yyyy", { locale: tr }));
+        sheet.cell("B3").value(format(reportStartDate, "MMMM yyyy", { locale: tr }));
 
-        // Tablo başlıkları
+        // Table headers
         let currentRow = 5;
         sheet.cell(`A${currentRow}`).value("Ad Soyad").style(tableHeaderStyle);
         sheet.cell(`B${currentRow}`).value("Pozisyon").style(tableHeaderStyle);
@@ -878,13 +876,13 @@ export function registerRoutes(app: Express): Server {
         sheet.cell(`F${currentRow}`).value("Toplam").style(tableHeaderStyle);
         currentRow++;
 
-        // Her personel için performans verilerini al
+        // Employee performance data
         for (const employee of allEmployees) {
           const achievements = await db.query.dailyAchievements.findMany({
             where: and(
               eq(dailyAchievements.employeeId, employee.id),
-              gte(dailyAchievements.date, startDate.toISOString()),
-              lte(dailyAchievements.date, endDate.toISOString())
+              gte(dailyAchievements.date, reportStartDate.toISOString()),
+              lte(dailyAchievements.date, reportEndDate.toISOString())
             ),
             orderBy: (achievements, { asc }) => [asc(achievements.date)],
           });
@@ -904,18 +902,18 @@ export function registerRoutes(app: Express): Server {
           currentRow++;
         }
 
-        // Toplam satırı
+        // Totals row
         currentRow++;
         sheet.cell(`A${currentRow}`).value("TOPLAM").style(subHeaderStyle);
         sheet.range(`A${currentRow}:B${currentRow}`).merged(true);
 
-        // Toplam formülleri
+        // Total formulas
         sheet.cell(`C${currentRow}`).formula(`=SUM(C6:C${currentRow - 2})`).style(subHeaderStyle);
         sheet.cell(`D${currentRow}`).formula(`=SUM(D6:D${currentRow - 2})`).style(subHeaderStyle);
         sheet.cell(`E${currentRow}`).formula(`=SUM(E6:E${currentRow - 2})`).style(subHeaderStyle);
         sheet.cell(`F${currentRow}`).formula(`=SUM(F6:F${currentRow - 2})`).style(subHeaderStyle);
 
-        // Sütun genişlikleri
+        // Column widths
         sheet.column("A").width(30);
         sheet.column("B").width(20);
         sheet.column("C").width(15);
@@ -926,7 +924,7 @@ export function registerRoutes(app: Express): Server {
 
       const buffer = await workbook.outputAsync();
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename=performans-raporu-${format(startDate, "yyyy-MM")}.xlsx`);
+      res.setHeader("Content-Disposition", `attachment; filename=performans-raporu-${format(reportStartDate, "yyyy-MM")}.xlsx`);
       res.send(buffer);
 
     } catch (error: any) {
