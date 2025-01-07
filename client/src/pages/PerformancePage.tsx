@@ -145,8 +145,8 @@ export default function PerformancePage() {
             <p className="text-sm text-muted-foreground mb-4">
               {employeesError ? "Personel listesi alınamadı" : "Performans verileri alınamadı"}
             </p>
-            <Button 
-              onClick={() => window.location.reload()} 
+            <Button
+              onClick={() => window.location.reload()}
               variant="outline"
               className="w-full"
             >
@@ -254,7 +254,7 @@ export default function PerformancePage() {
   const topPerformers = calculateTopPerformers();
 
   return (
-    <Layout employees={employees} isLoading={employeesLoading}>
+    <Layout employees={employees || []} isLoading={employeesLoading}>
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl space-y-6">
         {/* Performans Özeti Widget'ları */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -308,16 +308,16 @@ export default function PerformancePage() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
             Performans Değerlendirme
           </h1>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             <Select
               value={selectedEmployeeId}
               onValueChange={setSelectedEmployeeId}
             >
-              <SelectTrigger className="w-[200px] bg-white hover:bg-gray-50 transition-colors">
+              <SelectTrigger className="w-full md:w-[200px] bg-white hover:bg-gray-50 transition-colors">
                 <SelectValue placeholder="Personel Seçin" />
               </SelectTrigger>
               <SelectContent>
@@ -335,7 +335,7 @@ export default function PerformancePage() {
                 <Button
                   variant="outline"
                   className={cn(
-                    "justify-start text-left font-normal bg-white hover:bg-gray-50 transition-colors",
+                    "w-full md:w-auto justify-start text-left font-normal bg-white hover:bg-gray-50 transition-colors",
                     !currentDate && "text-muted-foreground"
                   )}
                 >
@@ -360,7 +360,7 @@ export default function PerformancePage() {
 
             <Button
               variant="outline"
-              className="bg-white hover:bg-gray-50 transition-colors gap-2"
+              className="w-full md:w-auto bg-white hover:bg-gray-50 transition-colors gap-2"
               onClick={() => {
                 if (!currentDate) {
                   toast({
@@ -419,7 +419,9 @@ export default function PerformancePage() {
                         </span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-7 md:grid-cols-31 gap-1">
+
+                    {/* Mobil uyumlu takvim grid yapısı */}
+                    <div className="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-14 xl:grid-cols-31 gap-2">
                       {daysInMonth.map((day) => {
                         const dayAchievement = monthlyAchievements.find(
                           a => format(parseISO(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
@@ -434,30 +436,37 @@ export default function PerformancePage() {
                               setNotes("");
                             }}
                             className={cn(
-                              "text-center p-1 rounded-md border-2 transition-all hover:scale-105 h-auto flex flex-col items-center justify-center group relative cursor-pointer",
+                              "relative p-3 rounded-lg border-2 transition-all hover:scale-105 cursor-pointer",
                               dayAchievement
-                                ? "bg-gradient-to-br border-gray-300 shadow-sm hover:shadow-md"
+                                ? "bg-gradient-to-br border-gray-300 shadow hover:shadow-md"
                                 : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
                             )}
                           >
-                            <div className="text-xs font-medium">{format(day, "d")}</div>
-                            {dayAchievement && (
-                              <>
-                                <div className="mt-1">
+                            <div className="text-center">
+                              <div className="font-medium mb-1">{format(day, "d")}</div>
+                              {dayAchievement && (
+                                <div className="flex flex-col items-center gap-1">
                                   {getAchievementIcon(dayAchievement.type)}
+                                  {dayAchievement.notes && (
+                                    <div className="text-xs text-gray-500 truncate max-w-[100px]" title={dayAchievement.notes}>
+                                      {dayAchievement.notes}
+                                    </div>
+                                  )}
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteAchievement(dayAchievement.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-3 w-3 text-red-500" />
-                                </Button>
-                              </>
+                              )}
+                            </div>
+                            {dayAchievement && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white shadow hover:bg-red-50 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAchievement(dayAchievement.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
                             )}
                           </div>
                         );
