@@ -203,9 +203,11 @@ export default function Dashboard() {
                   return (
                     <div key={leave.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
                       <div>
-                        <div className="font-medium">
-                          {employee?.firstName} {employee?.lastName}
-                        </div>
+                        <Link href={`/employee/${employee?.id}`} className="group">
+                          <div className="font-medium hover:text-blue-600 transition-colors cursor-pointer">
+                            {employee?.firstName} {employee?.lastName}
+                          </div>
+                        </Link>
                         <div className="text-sm text-gray-500">
                           {employee?.department}
                         </div>
@@ -400,7 +402,11 @@ export default function Dashboard() {
                   <Card key={employee.id} className="border-none shadow-none">
                     <CardHeader className="pb-2 px-0">
                       <CardTitle className="text-base font-medium flex items-center justify-between">
-                        <span>{employee.firstName} {employee.lastName}</span>
+                        <Link href={`/employee/${employee.id}`} className="group">
+                          <div className="font-medium hover:text-blue-600 transition-colors cursor-pointer">
+                            {employee.firstName} {employee.lastName}
+                          </div>
+                        </Link>
                         <span className="text-sm font-normal text-gray-500">
                           {employee.department}
                         </span>
