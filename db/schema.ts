@@ -26,7 +26,7 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Yeni tablo: Araçlar
+// Araçlar tablosu
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -43,7 +43,7 @@ export const inventoryItems = pgTable("inventory_items", {
   type: text("type").notNull(),
   condition: text("condition").notNull(),
   notes: text("notes"),
-  assignedTo: serial("assigned_to").references(() => employees.id, { onDelete: 'set null' }).notNull(),
+  assignedTo: serial("assigned_to").references(() => employees.id, { onDelete: 'set null' }),
   assignedAt: timestamp("assigned_at"),
   returnedAt: timestamp("returned_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -57,7 +57,7 @@ export const leaves = pgTable("leaves", {
   endDate: date("end_date").notNull(),
   type: text("type").notNull(),
   status: text("status").notNull(),
-  reason: text("reason").notNull(),
+  reason: text("reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
