@@ -33,6 +33,7 @@ export const vehicles = pgTable("vehicles", {
   plate: text("plate").unique().notNull(),
   mileage: numeric("mileage").notNull(),
   inspectionDate: date("inspection_date").notNull(),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
