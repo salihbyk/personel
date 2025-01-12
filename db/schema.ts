@@ -37,19 +37,36 @@ export const vehicles = pgTable("vehicles", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const inventoryItems = pgTable("inventory_items", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
-  condition: text("condition").notNull(),
-  notes: text("notes"),
-  assignedTo: serial("assigned_to").references(() => employees.id, { onDelete: 'set null' }),
-  assignedAt: timestamp("assigned_at"),
-  returnedAt: timestamp("returned_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+// Relations
+export const employeeRelations = relations(employees, ({ many }) => ({
+  leaves: many(leaves),
+  achievements: many(dailyAchievements),
+  inventoryItems: many(inventoryItems),
+}));
 
+// Schemas
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
+export const insertEmployeeSchema = createInsertSchema(employees);
+export const selectEmployeeSchema = createSelectSchema(employees);
+export const insertVehicleSchema = createInsertSchema(vehicles);
+export const selectVehicleSchema = createSelectSchema(vehicles);
+
+// Types
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type Employee = typeof employees.$inferSelect;
+export type NewEmployee = typeof employees.$inferInsert;
+export type Vehicle = typeof vehicles.$inferSelect;
+export type NewVehicle = typeof vehicles.$inferInsert;
+
+export type EmergencyContact = {
+  relationship: string;
+  name: string;
+  phone: string;
+};
+
+// Diğer tablolar ve ilişkiler aynı kalacak
 export const leaves = pgTable("leaves", {
   id: serial("id").primaryKey(),
   employeeId: serial("employee_id").references(() => employees.id).notNull(),
@@ -71,12 +88,18 @@ export const dailyAchievements = pgTable("daily_achievements", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Relations
-export const employeeRelations = relations(employees, ({ many }) => ({
-  leaves: many(leaves),
-  achievements: many(dailyAchievements),
-  inventoryItems: many(inventoryItems),
-}));
+export const inventoryItems = pgTable("inventory_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  condition: text("condition").notNull(),
+  notes: text("notes"),
+  assignedTo: serial("assigned_to").references(() => employees.id, { onDelete: 'set null' }),
+  assignedAt: timestamp("assigned_at"),
+  returnedAt: timestamp("returned_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
 export const leaveRelations = relations(leaves, ({ one }) => ({
   employee: one(employees, {
@@ -99,36 +122,16 @@ export const inventoryItemRelations = relations(inventoryItems, ({ one }) => ({
   }),
 }));
 
-// Schemas
-export const insertUserSchema = createInsertSchema(users);
-export const selectUserSchema = createSelectSchema(users);
-export const insertEmployeeSchema = createInsertSchema(employees);
-export const selectEmployeeSchema = createSelectSchema(employees);
-export const insertLeaveSchema = createInsertSchema(leaves);
 export const selectLeaveSchema = createSelectSchema(leaves);
+export const insertLeaveSchema = createInsertSchema(leaves);
 export const insertDailyAchievementSchema = createInsertSchema(dailyAchievements);
 export const selectDailyAchievementSchema = createSelectSchema(dailyAchievements);
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems);
 export const selectInventoryItemSchema = createSelectSchema(inventoryItems);
-export const insertVehicleSchema = createInsertSchema(vehicles);
-export const selectVehicleSchema = createSelectSchema(vehicles);
 
-// Types
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-export type Employee = typeof employees.$inferSelect;
-export type NewEmployee = typeof employees.$inferInsert;
 export type Leave = typeof leaves.$inferSelect;
 export type NewLeave = typeof leaves.$inferInsert;
 export type DailyAchievement = typeof dailyAchievements.$inferSelect;
 export type NewDailyAchievement = typeof dailyAchievements.$inferInsert;
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type NewInventoryItem = typeof inventoryItems.$inferInsert;
-export type Vehicle = typeof vehicles.$inferSelect;
-export type NewVehicle = typeof vehicles.$inferInsert;
-
-export type EmergencyContact = {
-  relationship: string;
-  name: string;
-  phone: string;
-};
