@@ -49,10 +49,10 @@ declare module 'pdfkit' {
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
-import { employees, leaves, inventoryItems, dailyAchievements } from "@db/schema";
+import { employees, leaves, vehicles, inventoryItems, dailyAchievements } from "@db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import XlsxPopulate from "xlsx-populate";
-import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, isWithinInterval } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { SQL } from "drizzle-orm";
 
@@ -70,6 +70,79 @@ export function registerRoutes(app: Express): Server {
   app.use("/api/leaves", requireAuth);
   app.use("/api/inventory", requireAuth);
   app.use("/api/reports", requireAuth);
+  app.use("/api/vehicles", requireAuth);
+
+  // Vehicles API Routes
+  app.get("/api/vehicles", async (_req, res) => {
+    try {
+      const allVehicles = await db.query.vehicles.findMany({
+        orderBy: [desc(vehicles.createdAt)],
+      });
+      res.json(allVehicles);
+    } catch (error: any) {
+      console.error("Araç listesi alınamadı:", error);
+      res.status(500).send("Araç listesi alınamadı: " + error.message);
+    }
+  });
+
+  app.get("/api/vehicles/:id", async (req, res) => {
+    try {
+      const vehicle = await db.query.vehicles.findFirst({
+        where: eq(vehicles.id, parseInt(req.params.id)),
+      });
+
+      if (!vehicle) {
+        return res.status(404).send("Araç bulunamadı");
+      }
+
+      res.json(vehicle);
+    } catch (error: any) {
+      console.error("Araç bilgisi alınamadı:", error);
+      res.status(500).send("Araç bilgisi alınamadı: " + error.message);
+    }
+  });
+
+  app.post("/api/vehicles", async (req, res) => {
+    try {
+      const vehicle = await db.insert(vehicles).values(req.body).returning();
+      res.json(vehicle[0]);
+    } catch (error: any) {
+      console.error("Araç eklenemedi:", error);
+      res.status(400).send("Araç eklenemedi: " + error.message);
+    }
+  });
+
+  app.put("/api/vehicles/:id", async (req, res) => {
+    try {
+      const vehicle = await db
+        .update(vehicles)
+        .set(req.body)
+        .where(eq(vehicles.id, parseInt(req.params.id)))
+        .returning();
+      res.json(vehicle[0]);
+    } catch (error: any) {
+      console.error("Araç güncellenemedi:", error);
+      res.status(400).send("Araç güncellenemedi: " + error.message);
+    }
+  });
+
+  app.delete("/api/vehicles/:id", async (req, res) => {
+    try {
+      const result = await db
+        .delete(vehicles)
+        .where(eq(vehicles.id, parseInt(req.params.id)))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).send("Araç bulunamadı");
+      }
+
+      res.json({ message: "Araç silindi", vehicle: result[0] });
+    } catch (error: any) {
+      console.error("Araç silinemedi:", error);
+      res.status(500).send("Araç silinemedi: " + error.message);
+    }
+  });
 
   // Get employees
   app.get("/api/employees", async (_req, res) => {
@@ -733,8 +806,7 @@ export function registerRoutes(app: Express): Server {
           sheet.cell(`A${currentRow}`).value(format(achievementDate, "dd.MM.yyyy")).style({ border: true });
           sheet.cell(`B${currentRow}`).value({
             'STAR': 'Yıldız',
-            'CHEF': 'Şef',
-            'X': 'Zarar'
+            'CHEF': 'Şef',            'X': 'Zarar'
           }[achievement.type]).style({ border: true });
           sheet.cell(`C${currentRow}`).value(achievement.notes || "-").style({ border: true });
           currentRow++;
