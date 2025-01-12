@@ -14,7 +14,8 @@ import {
   Check,
   Home,
   BarChart2,
-  Target
+  Target,
+  Car
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
@@ -176,6 +177,15 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
             >
               <Target className="h-4 w-4" />
               Performans
+            </Button>
+          </Link>
+          <Link href="/vehicles">
+            <Button
+              variant={location === "/vehicles" ? "secondary" : "ghost"}
+              className="w-full justify-start gap-2 transition-all hover:bg-blue-50/50"
+            >
+              <Car className="h-4 w-4" />
+              Araç Takip
             </Button>
           </Link>
         </div>

@@ -8,6 +8,7 @@ import EmployeeForm from "./pages/EmployeeForm";
 import AuthPage from "./pages/AuthPage";
 import ReportingPage from "./pages/ReportingPage";
 import PerformancePage from "./pages/PerformancePage";
+import VehiclesPage from "./pages/VehiclesPage";
 import { useQuery } from "@tanstack/react-query";
 
 function AppContent() {
@@ -37,6 +38,7 @@ function AppContent() {
         <Route path="/employee/:id/edit" component={EmployeeForm} />
         <Route path="/reports" component={ReportingPage} />
         <Route path="/performance" component={PerformancePage} />
+        <Route path="/vehicles" component={VehiclesPage} />
       </Switch>
       <Toaster />
     </div>
