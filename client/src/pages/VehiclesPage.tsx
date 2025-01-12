@@ -66,6 +66,7 @@ export default function VehiclesPage() {
       plate: "",
       mileage: "0",
       inspectionDate: new Date().toISOString().split("T")[0],
+      notes: "",
     },
   });
 
@@ -231,6 +232,7 @@ export default function VehiclesPage() {
                             plate: vehicle.plate,
                             mileage: vehicle.mileage.toString(),
                             inspectionDate: format(new Date(vehicle.inspectionDate), "yyyy-MM-dd"),
+                            notes: vehicle.notes || "",
                           });
                           setShowAddDialog(true);
                         }}
@@ -264,6 +266,12 @@ export default function VehiclesPage() {
                         {format(new Date(vehicle.inspectionDate), "d MMMM yyyy", { locale: tr })}
                       </span>
                     </div>
+                    {vehicle.notes && (
+                      <div className="mt-2">
+                        <span className="text-sm text-gray-500">Not</span>
+                        <p className="text-sm mt-1">{vehicle.notes}</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -338,6 +346,20 @@ export default function VehiclesPage() {
                       <FormLabel>Muayene Tarihi</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Not</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Araç hakkında notlar..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
