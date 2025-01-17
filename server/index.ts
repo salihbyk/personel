@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { db } from "@db";
+import { startInspectionReminderJob } from "./jobs/inspectionReminder";
 
 const app = express();
 
@@ -66,6 +67,10 @@ app.use((req, res, next) => {
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
+
+    // Muayene hatırlatıcı job'ı başlat
+    startInspectionReminderJob();
+    log("Muayene hatırlatıcı job'ı başlatıldı");
 
     // Auth sistemi kurulumu
     setupAuth(app);
