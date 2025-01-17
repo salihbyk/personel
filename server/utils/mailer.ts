@@ -73,7 +73,7 @@ const template = Handlebars.compile(emailTemplate);
 const transporter = nodemailer.createTransport({
   host: 'smtp.yandex.com',
   port: 465,
-  secure: true, // use TLS
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
@@ -92,12 +92,15 @@ export async function sendVehicleInspectionReminder(vehicle: {
     remainingDays: daysRemaining,
   });
 
-  await transporter.sendMail({
+  const info = await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: 'info@europatrans.com.tr',
     subject: `Araç Muayene Hatırlatması - ${vehicle.plate} - ${daysRemaining} Gün Kaldı`,
     html,
   });
+
+  console.log('Email sent:', info.messageId);
+  return info;
 }
 
 // Test mail gönderimi için fonksiyon
@@ -109,7 +112,8 @@ export async function sendTestMail() {
   };
 
   try {
-    await sendVehicleInspectionReminder(testVehicle, 20);
+    const info = await sendVehicleInspectionReminder(testVehicle, 20);
+    console.log('Test mail gönderildi:', info.messageId);
     return { success: true, message: "Test maili başarıyla gönderildi" };
   } catch (error: any) {
     console.error("Test mail gönderimi hatası:", error);
