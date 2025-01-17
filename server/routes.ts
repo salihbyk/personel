@@ -55,6 +55,7 @@ import XlsxPopulate from "xlsx-populate";
 import { format, parseISO, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { SQL } from "drizzle-orm";
+import { sendTestMail } from "./utils/mailer";
 
 export function registerRoutes(app: Express): Server {
   // API güvenlik kontrolü
@@ -64,6 +65,20 @@ export function registerRoutes(app: Express): Server {
     }
     next();
   };
+
+  // Test mail endpoint'i auth gerektirmiyor
+  app.post("/api/test-mail", async (_req, res) => {
+    try {
+      const result = await sendTestMail();
+      if (result.success) {
+        res.json({ message: result.message });
+      } else {
+        res.status(500).json({ message: result.message });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // Tüm API rotalarında auth kontrolü
   app.use("/api/employees", requireAuth);
@@ -676,7 +691,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Fix the achievements Excel report section
-    app.get("/api/achievements/excel", async (req, res) => {
+  app.get("/api/achievements/excel", async (req, res) => {
     try {
       const date = req.query.date as string;
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;

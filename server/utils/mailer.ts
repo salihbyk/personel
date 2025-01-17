@@ -99,3 +99,20 @@ export async function sendVehicleInspectionReminder(vehicle: {
     html,
   });
 }
+
+// Test mail gönderimi için fonksiyon
+export async function sendTestMail() {
+  const testVehicle = {
+    name: "Test Araç",
+    plate: "34TEST123",
+    inspectionDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000) // 20 gün sonrası
+  };
+
+  try {
+    await sendVehicleInspectionReminder(testVehicle, 20);
+    return { success: true, message: "Test maili başarıyla gönderildi" };
+  } catch (error: any) {
+    console.error("Test mail gönderimi hatası:", error);
+    return { success: false, message: error.message };
+  }
+}

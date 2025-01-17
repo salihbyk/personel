@@ -36,6 +36,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -359,7 +360,11 @@ export default function VehiclesPage() {
                     <FormItem>
                       <FormLabel>Not</FormLabel>
                       <FormControl>
-                        <Input placeholder="Araç hakkında notlar..." {...field} />
+                        <Textarea 
+                          placeholder="Araç hakkında notlar..."
+                          className="resize-none"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
