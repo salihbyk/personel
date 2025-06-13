@@ -68,15 +68,32 @@ export function registerRoutes(app: Express): Server {
 
   // Test mail endpoint'i auth gerektirmiyor
   app.post("/api/test-mail", async (_req, res) => {
+    console.log("Test email endpoint triggered");
     try {
       const result = await sendTestMail();
       if (result.success) {
-        res.json({ message: result.message });
+        console.log("Test email was successful");
+        res.json({ 
+          success: true,
+          message: result.message 
+        });
       } else {
-        res.status(500).json({ message: result.message });
+        console.error("Test email failed:", result.message);
+        // Include all error details in the response for debugging
+        res.status(500).json({ 
+          success: false,
+          message: result.message,
+          details: result.details || "No additional details",
+          code: result.code || "UNKNOWN"
+        });
       }
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error("Unexpected error in test mail endpoint:", error);
+      res.status(500).json({ 
+        success: false,
+        message: `Beklenmeyen bir hata oluştu: ${error.message}`,
+        details: error.stack
+      });
     }
   });
 
