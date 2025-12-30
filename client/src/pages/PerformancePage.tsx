@@ -16,6 +16,7 @@ import { CalendarIcon, Star, ChefHat, X, Download, Trash2, AlertCircle } from "l
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/lib/queryClient";
 import type { Employee, DailyAchievement } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
@@ -59,7 +60,7 @@ export default function PerformancePage() {
   const deleteAchievementMutation = useMutation({
     mutationFn: async (achievementId: number) => {
       try {
-        const response = await fetch(`/api/achievements/${achievementId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/achievements/${achievementId}`, {
           method: "DELETE",
         });
 
@@ -94,7 +95,7 @@ export default function PerformancePage() {
   const achievementMutation = useMutation({
     mutationFn: async (data: { employeeId: number; date: string; type: string; notes?: string }) => {
       try {
-        const response = await fetch("/api/achievements", {
+        const response = await fetch(`${API_BASE_URL}/api/achievements`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

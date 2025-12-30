@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL } from "@/lib/queryClient";
 import { inventoryItemSchema } from "@/lib/schemas";
 import type { Employee, InventoryItem } from "@db/schema";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -67,7 +67,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await fetch("/api/inventory", {
+      const response = await fetch(`${API_BASE_URL}/api/inventory`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -100,7 +100,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
   const updateMutation = useMutation({
     mutationFn: async (data: FormData & { id: number }) => {
       const { id, ...rest } = data;
-      const response = await fetch(`/api/inventory/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/inventory/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(rest),
@@ -133,7 +133,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/inventory/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/inventory/${id}`, {
         method: "DELETE",
       });
 

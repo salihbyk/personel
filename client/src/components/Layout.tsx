@@ -22,6 +22,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { Employee } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/lib/queryClient";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -80,7 +81,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/logout", {
+      const response = await fetch(`${API_BASE_URL}/api/logout`, {
         method: "POST",
         credentials: "include",
       });

@@ -41,21 +41,24 @@ declare global {
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
+  const isProduction = app.get("env") === "production";
+  
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "secure-session-secret",
+    secret: process.env.SESSION_SECRET || "secure-session-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: app.get("env") === "production",
+      secure: isProduction,
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 saat
+      sameSite: isProduction ? 'none' : 'lax', // Cross-origin için 'none' gerekli
     },
     store: new MemoryStore({
       checkPeriod: 86400000, // 24 saatte bir temizle
     }),
   };
 
-  if (app.get("env") === "production") {
+  if (isProduction) {
     app.set("trust proxy", 1);
   }
 

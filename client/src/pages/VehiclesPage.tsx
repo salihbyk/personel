@@ -46,7 +46,7 @@ import { tr } from "date-fns/locale";
 import type { Vehicle } from "@db/schema";
 import { insertVehicleSchema } from "@db/schema";
 import type { z } from "zod";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL } from "@/lib/queryClient";
 
 type VehicleFormData = z.infer<typeof insertVehicleSchema>;
 
@@ -73,7 +73,7 @@ export default function VehiclesPage() {
 
   const addMutation = useMutation({
     mutationFn: async (data: VehicleFormData) => {
-      const response = await fetch("/api/vehicles", {
+      const response = await fetch(`${API_BASE_URL}/api/vehicles`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,7 +107,7 @@ export default function VehiclesPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: VehicleFormData & { id: number }) => {
-      const response = await fetch(`/api/vehicles/${data.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/vehicles/${data.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -142,7 +142,7 @@ export default function VehiclesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/vehicles/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/vehicles/${id}`, {
         method: "DELETE",
       });
 

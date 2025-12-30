@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { UserCircle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { API_BASE_URL } from "@/lib/queryClient";
 
 const loginSchema = z.object({
   password: z.string().min(1, "Şifre gerekli"),
@@ -35,7 +36,7 @@ export default function AuthPage() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: z.infer<typeof loginSchema>) => {
-      const response = await fetch("/api/login", {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, username: "admin" }), // Backend için sabit username

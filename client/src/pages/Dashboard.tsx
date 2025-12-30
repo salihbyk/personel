@@ -26,6 +26,7 @@ import { Users, CalendarDays, CalendarClock, Check, ChevronsUpDown } from "lucid
 import { isWithinInterval, parseISO, startOfDay, endOfDay, format, differenceInDays, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/lib/queryClient";
 import type { Employee, Leave } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -49,7 +50,7 @@ export default function Dashboard() {
 
   const bulkLeaveMutation = useMutation({
     mutationFn: async (data: { employeeIds: number[]; startDate: string; endDate: string; reason?: string }) => {
-      const response = await fetch("/api/leaves/bulk", {
+      const response = await fetch(`${API_BASE_URL}/api/leaves/bulk`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
