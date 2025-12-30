@@ -46,7 +46,7 @@ declare module 'pdfkit' {
   export = PDFDocument;
 }
 
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { db } from "@db";
 import { employees, leaves, vehicles, inventoryItems, dailyAchievements } from "@db/schema";
@@ -56,14 +56,28 @@ import { format, parseISO, startOfMonth, endOfMonth, differenceInDays } from "da
 import { tr } from "date-fns/locale";
 import type { SQL } from "drizzle-orm";
 import { sendTestMail } from "./utils/mailer";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.SESSION_SECRET || "ptakip-super-secret-key-2025";
 
 export function registerRoutes(app: Express): Server {
-  // API güvenlik kontrolü
-  const requireAuth = (req: Request, res: Response, next: Function) => {
-    if (!req.isAuthenticated()) {
+  // JWT Authentication middleware
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).send("Giriş yapılmadı");
     }
-    next();
+    
+    const token = authHeader.substring(7);
+    
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      (req as any).user = decoded;
+      next();
+    } catch (error) {
+      return res.status(401).send("Geçersiz veya süresi dolmuş token");
+    }
   };
 
   // Test mail endpoint'i auth gerektirmiyor
