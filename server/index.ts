@@ -1,4 +1,6 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
@@ -6,6 +8,16 @@ import { db } from "@db";
 import { startInspectionReminderJob } from "./jobs/inspectionReminder";
 
 const app = express();
+
+// CORS ayarları - Production'da frontend domain'ini ekle
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5000', 'http://localhost:3000', 'https://www.europagroup.com.tr'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+};
+
+app.use(cors(corsOptions));
 
 // Temel middleware kurulumu
 app.use(express.json());

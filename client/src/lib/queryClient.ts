@@ -1,10 +1,16 @@
 import { QueryClient } from "@tanstack/react-query";
 
+// API Base URL - Production'da backend URL'ini kullan
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
-        const res = await fetch(queryKey[0] as string, {
+        const endpoint = queryKey[0] as string;
+        const url = `${API_BASE_URL}${endpoint}`;
+        
+        const res = await fetch(url, {
           credentials: "include",
         });
 
