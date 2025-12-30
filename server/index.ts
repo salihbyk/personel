@@ -106,11 +106,12 @@ app.use((req, res, next) => {
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
-      serveStatic(app);
+      // Production'da sadece API çalışır, frontend ayrı hostingde
+      log("Production modunda çalışıyor - sadece API");
     }
 
-    const PORT = 5000;
-    server.listen(PORT, "0.0.0.0", () => {
+    const PORT = process.env.PORT || 5000;
+    server.listen(Number(PORT), "0.0.0.0", () => {
       log(`Sunucu ${PORT} portunda çalışıyor`);
     });
   } catch (error) {
