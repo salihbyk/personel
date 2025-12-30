@@ -3,6 +3,25 @@ import { QueryClient } from "@tanstack/react-query";
 // API Base URL - Production'da backend URL'ini kullan
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
+// Token yönetimi
+export function getToken(): string | null {
+  return localStorage.getItem('auth_token');
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem('auth_token', token);
+}
+
+export function removeToken(): void {
+  localStorage.removeItem('auth_token');
+}
+
+// Authorization header'ı ile fetch
+export function getAuthHeaders(): HeadersInit {
+  const token = getToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -11,7 +30,7 @@ export const queryClient = new QueryClient({
         const url = `${API_BASE_URL}${endpoint}`;
         
         const res = await fetch(url, {
-          credentials: "include",
+          headers: getAuthHeaders(),
         });
 
         if (!res.ok) {

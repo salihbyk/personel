@@ -46,7 +46,7 @@ import { tr } from "date-fns/locale";
 import type { Vehicle } from "@db/schema";
 import { insertVehicleSchema } from "@db/schema";
 import type { z } from "zod";
-import { queryClient, API_BASE_URL } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 
 type VehicleFormData = z.infer<typeof insertVehicleSchema>;
 
@@ -77,6 +77,7 @@ export default function VehiclesPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(data),
       });
@@ -111,6 +112,7 @@ export default function VehiclesPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(data),
       });
@@ -144,6 +146,7 @@ export default function VehiclesPage() {
     mutationFn: async (id: number) => {
       const response = await fetch(`${API_BASE_URL}/api/vehicles/${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

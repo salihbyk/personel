@@ -22,7 +22,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { Employee } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE_URL } from "@/lib/queryClient";
+import { API_BASE_URL, removeToken, getAuthHeaders } from "@/lib/queryClient";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -83,7 +83,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
     mutationFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/logout`, {
         method: "POST",
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -93,6 +93,7 @@ export function Layout({ children, employees, isLoading }: LayoutProps) {
       return response.json();
     },
     onSuccess: () => {
+      removeToken();
       toast({
         title: "Başarılı",
         description: "Çıkış yapıldı",

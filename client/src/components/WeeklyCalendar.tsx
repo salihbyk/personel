@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar as CalendarIcon, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, API_BASE_URL } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, isWithinInterval, parseISO, addWeeks, subWeeks } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -94,7 +94,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
       try {
         const response = await fetch(`${API_BASE_URL}/api/leaves`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify(data),
         });
 
@@ -132,6 +132,7 @@ export function WeeklyCalendar({ employee }: WeeklyCalendarProps) {
     mutationFn: async (leaveId: number) => {
       const response = await fetch(`${API_BASE_URL}/api/leaves/${leaveId}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

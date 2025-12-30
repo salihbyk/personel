@@ -26,7 +26,7 @@ import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Pencil, Trash2, Calendar, Clock, Timer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, API_BASE_URL } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import type { Employee, Leave } from "@db/schema";
 import { useState } from "react";
 
@@ -64,6 +64,7 @@ export default function EmployeeDetail() {
     mutationFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/employees/${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

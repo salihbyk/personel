@@ -26,7 +26,7 @@ import { Users, CalendarDays, CalendarClock, Check, ChevronsUpDown } from "lucid
 import { isWithinInterval, parseISO, startOfDay, endOfDay, format, differenceInDays, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { API_BASE_URL } from "@/lib/queryClient";
+import { API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import type { Employee, Leave } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -54,6 +54,7 @@ export default function Dashboard() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(data),
       });

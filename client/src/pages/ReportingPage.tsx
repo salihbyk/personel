@@ -16,7 +16,7 @@ import { CalendarIcon, FileSpreadsheet, Users, Medal, Trophy, Calendar as Calend
 import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { API_BASE_URL } from "@/lib/queryClient";
+import { API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import type { Employee, Leave } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -70,6 +70,7 @@ export default function ReportingPage() {
 
       const response = await fetch(`${API_BASE_URL}/api/reports/excel?${queryParams}`, {
         method: 'GET',
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

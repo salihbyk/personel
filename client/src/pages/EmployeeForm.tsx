@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { employeeSchema } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import type { Employee, EmergencyContact } from "@db/schema";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import { Plus, Trash2 } from "lucide-react";
 import type { z } from "zod";
 
@@ -78,10 +78,10 @@ export default function EmployeeForm() {
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       const response = await fetch(
-        id ? `/api/employees/${id}` : "/api/employees",
+        id ? `${API_BASE_URL}/api/employees/${id}` : `${API_BASE_URL}/api/employees`,
         {
           method: id ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify(data),
         }
       );

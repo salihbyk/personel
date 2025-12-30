@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { queryClient, API_BASE_URL } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Employee } from "@db/schema";
 
@@ -26,6 +26,7 @@ export default function EmployeeTable({ employees, isLoading }: EmployeeTablePro
     mutationFn: async (id: number) => {
       const response = await fetch(`${API_BASE_URL}/api/employees/${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       
       if (!response.ok) {

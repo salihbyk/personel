@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { UserCircle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { API_BASE_URL } from "@/lib/queryClient";
+import { API_BASE_URL, setToken } from "@/lib/queryClient";
 
 const loginSchema = z.object({
   password: z.string().min(1, "Şifre gerekli"),
@@ -39,17 +39,21 @@ export default function AuthPage() {
       const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, username: "admin" }), // Backend için sabit username
-        credentials: "include",
+        body: JSON.stringify({ ...data, username: "admin" }),
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorData = await response.json().catch(() => ({ message: "Giriş başarısız" }));
+        throw new Error(errorData.message || "Giriş başarısız");
       }
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Token'ı localStorage'a kaydet
+      if (data.token) {
+        setToken(data.token);
+      }
       toast({
         title: "Başarılı",
         description: "Giriş yapıldı",

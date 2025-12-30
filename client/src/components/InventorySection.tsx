@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, API_BASE_URL } from "@/lib/queryClient";
+import { queryClient, API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import { inventoryItemSchema } from "@/lib/schemas";
 import type { Employee, InventoryItem } from "@db/schema";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -69,7 +69,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
     mutationFn: async (data: FormData) => {
       const response = await fetch(`${API_BASE_URL}/api/inventory`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(data),
       });
 
@@ -102,7 +102,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
       const { id, ...rest } = data;
       const response = await fetch(`${API_BASE_URL}/api/inventory/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(rest),
       });
 
@@ -135,6 +135,7 @@ export function InventorySection({ employee }: InventorySectionProps) {
     mutationFn: async (id: number) => {
       const response = await fetch(`${API_BASE_URL}/api/inventory/${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

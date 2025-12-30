@@ -16,7 +16,7 @@ import { CalendarIcon, Star, ChefHat, X, Download, Trash2, AlertCircle } from "l
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { API_BASE_URL } from "@/lib/queryClient";
+import { API_BASE_URL, getAuthHeaders } from "@/lib/queryClient";
 import type { Employee, DailyAchievement } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
@@ -62,6 +62,7 @@ export default function PerformancePage() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/achievements/${achievementId}`, {
           method: "DELETE",
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {
@@ -99,6 +100,7 @@ export default function PerformancePage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...getAuthHeaders(),
           },
           body: JSON.stringify(data),
         });
