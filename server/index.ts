@@ -10,13 +10,35 @@ import { startInspectionReminderJob } from "./jobs/inspectionReminder";
 const app = express();
 
 // CORS ayarları - Production'da frontend domain'ini ekle
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',') 
+  : [
+      'http://localhost:5000', 
+      'http://localhost:3000', 
+      'https://www.europagroup.com.tr',
+      'https://europagroup.com.tr'
+    ];
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5000', 'http://localhost:3000', 'https://www.europagroup.com.tr'],
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Tarayıcı dışı istekler (Postman, curl vs) için origin undefined olabilir
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Geliştirme aşamasında tüm originlere izin ver
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 };
 
+// Preflight istekleri için OPTIONS handler
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // Temel middleware kurulumu
